@@ -1,0 +1,675 @@
+/**
+ * bulletins.ts — Full bulletin data ported from MVP bulletins.js + data.js
+ * Categories: markets, crypto, macro (lab bulletins)
+ */
+
+// ── Extended bulletin type with drift/assets for internal use ──
+export interface BulletinTemplate {
+  id: string;
+  source: string;
+  terms: string[];
+  headline: string;
+  summary: string;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+  category: string;
+  assets?: string[];
+  impact?: string;
+  projection?: string;
+  body: string[];
+  drift?: number;
+}
+
+// ── News Organizations ──
+export interface NewsOrg {
+  id: string;
+  name: string;
+  country: string;
+  leaning: string;
+  knownForGood: string[];
+  knownForBad: string[];
+  biasProfile: string;
+  writingStyle: string;
+}
+
+export const NEWS_ORGS: Record<string, NewsOrg> = {
+  'wall-street-jest': {
+    id: 'wall-street-jest',
+    name: 'The Wall Street Jest',
+    country: 'United States',
+    leaning: 'Centre-right, pro-business',
+    knownForGood: [
+      'Thorough earnings analysis and corporate deep-dives',
+      'Reliable data-driven financial reporting',
+      'Extensive global markets coverage',
+    ],
+    knownForBad: [
+      'Editorial pages carry strong corporate bias',
+      'Can amplify Wall Street consensus uncritically',
+      'Underrepresents retail investor perspective',
+    ],
+    biasProfile: 'The Wall Street Jest leans toward corporate interests and established financial institutions. Their reporting frames deregulation as inherently positive and views market events through institutional lenses. Management quotes often go under-scrutinized and bearish analysis may be softened to maintain source access. Their data and factual reporting is generally excellent — it is the editorial framing that carries pro-business assumptions. Useful for earnings analysis and corporate strategy, less useful for identifying systemic risk.',
+    writingStyle: 'Formal, authoritative, data-heavy prose. Favors management commentary and institutional language.',
+  },
+  'the-economost': {
+    id: 'the-economost',
+    name: 'The Economost',
+    country: 'United Kingdom',
+    leaning: 'Centre, classical liberal',
+    knownForGood: [
+      'Rigorous macro-economic analysis with global scope',
+      'Consistently challenges conventional market thinking',
+      'Excellent long-form explanatory journalism',
+    ],
+    knownForBad: [
+      'Free-market bias can downplay systemic risk',
+      'Editorializes within news coverage',
+      'London and Western-centric worldview',
+    ],
+    biasProfile: 'The Economost champions free markets, globalisation, and evidence-based policy. This gives their analysis systematic rigor but also a predictable ideological lean. They view government intervention skeptically and attribute market corrections to regulatory overreach rather than structural failures. Their financial coverage is well-sourced but watch for the assumption that deregulated markets self-correct — history suggests otherwise in every major crisis. Best used for macro context and contrarian framing of consensus narratives.',
+    writingStyle: 'Witty, global, slightly condescending. Uses historical analogies and cross-border comparisons extensively.',
+  },
+  'fax-news': {
+    id: 'fax-news',
+    name: 'FAX News Financial',
+    country: 'United States',
+    leaning: 'Right-wing populist',
+    knownForGood: [
+      'Covers small-business impact of policy changes',
+      'Direct, accessible financial reporting',
+      'Strong energy and industrial sector coverage',
+    ],
+    knownForBad: [
+      'Politically motivated market narratives',
+      'Blames opposing party for all downturns',
+      'Can promote speculative assets for audience engagement',
+    ],
+    biasProfile: 'FAX News Financial filters every market event through a partisan political lens. Bull markets are attributed to the preferred party; bear markets are blamed on the opposition. Their coverage tends toward the hyperbolic — minor policy shifts become existential threats or miraculous catalysts. When reading their financial reporting, strip away the political framing and focus on the underlying data. Their energy and manufacturing coverage can be genuinely useful, but their macro analysis is unreliable due to ideological contamination.',
+    writingStyle: 'Bombastic, emotional, uses superlatives and alarm language. Quotes politicians frequently.',
+  },
+  'global-herald-tribune': {
+    id: 'global-herald-tribune',
+    name: 'The Global Herald Tribune',
+    country: 'United Kingdom',
+    leaning: 'Centre-left, internationalist',
+    knownForGood: [
+      'Deep sourcing within central banks and regulators',
+      'Excellent cross-border M&A and policy coverage',
+      'Strong on European and emerging market analysis',
+    ],
+    knownForBad: [
+      'Can overweight regulatory perspectives',
+      'Technocratic tone alienates retail readers',
+      'Information asymmetry from paywalled analysis',
+    ],
+    biasProfile: 'The Global Herald Tribune is the preferred paper of central bankers and institutional allocators. Their sources are excellent but their framing favors the regulatory establishment. They view market volatility as a problem to be managed rather than a natural feature. Their financial reporting is among the most accurate available, but their editorial voice assumes more sophisticated regulation is always the answer — a view that can underestimate innovation and market adaptation. Read them for regulatory signals and policy direction.',
+    writingStyle: 'Measured, technical, eurozone-aware. Favors regulatory and policy angles with restrained prose.',
+  },
+  'red-square-financial': {
+    id: 'red-square-financial',
+    name: 'Red Square Financial',
+    country: 'Russia',
+    leaning: 'State-aligned, anti-Western',
+    knownForGood: [
+      'Commodity and energy markets from producer perspective',
+      'Covers sanctions and geopolitical trade impacts',
+      'Provides non-Western analytical framework',
+    ],
+    knownForBad: [
+      'State propaganda masquerading as financial analysis',
+      'Systematically promotes de-dollarization narrative',
+      'Fabricates or distorts economic data to support state position',
+    ],
+    biasProfile: 'Red Square Financial is a state-controlled outlet where editorial independence is absent. Every piece of financial analysis serves strategic communication goals. Dollar weakness is always exaggerated, sanctions are always failing, and Western economies are always on the brink. There is genuine value in understanding the commodity-producer perspective, but every data point and claim must be independently verified. Treat as a window into state messaging, not as a reliable news source.',
+    writingStyle: 'Propaganda-adjacent, emphasizes dollar weakness and Western decline. Uses loaded framing and selective data.',
+  },
+  'orient-express-markets': {
+    id: 'orient-express-markets',
+    name: 'Orient Express Markets',
+    country: 'Pan-Asian',
+    leaning: 'Pro-growth, techno-optimist',
+    knownForGood: [
+      'Excellent semiconductor and supply-chain coverage',
+      'Early reporting on Asian IPOs and tech developments',
+      'Strong manufacturing and trade data analysis',
+    ],
+    knownForBad: [
+      'Can underreport human rights and labor concerns',
+      'Tends to amplify growth narratives over risk factors',
+      'Political sensitivity limits critical coverage of major governments',
+    ],
+    biasProfile: 'Orient Express Markets covers the world from an Asian commercial hub perspective. Supply-chain disruptions and semiconductor developments get thorough treatment. Their bias leans toward growth optimism and technological progress narratives. When covering state-linked companies, their reporting can be selectively positive due to access considerations. Their trade and manufacturing data reporting is genuinely excellent — use it for those signals while maintaining independent judgment on political and governance matters.',
+    writingStyle: 'Technical, supply-chain focused, growth-optimist. Heavy on trade data and manufacturing metrics.',
+  },
+  'the-contrarian-post': {
+    id: 'the-contrarian-post',
+    name: 'The Contrarian Post',
+    country: 'United States',
+    leaning: 'Libertarian, perma-bear',
+    knownForGood: [
+      'Questions consensus narratives effectively',
+      'Covers tail risks others routinely ignore',
+      'Early identification of credit market stress signals',
+    ],
+    knownForBad: [
+      'Permanent bearish bias means frequent false alarms',
+      'Conspiracy-adjacent framing of central bank actions',
+      'Amplifies panic during normal corrections',
+    ],
+    biasProfile: 'The Contrarian Post operates from the assumption that financial systems are fragile and central banks are reckless. While this lens occasionally identifies genuine risks early — they were early on several credit events — their permanent bearish stance means they predict ten of the last two recessions. Their coverage of credit markets and tail risks has genuine analytical value, but their macro calls are systematically too negative. Read them for the questions they raise, not the answers they provide.',
+    writingStyle: 'Urgent, skeptical, heavy financial jargon. Favors doom scenarios and "what they are not telling you" framing.',
+  },
+};
+
+// ── Financial Terms Glossary ──
+export interface FinancialTerm {
+  term: string;
+  why: string;
+  interpret: string;
+  marketEffect: string;
+}
+
+export const FINANCIAL_TERMS: Record<string, FinancialTerm> = {
+  earnings: {
+    term: 'Earnings',
+    why: 'Earnings are the single most watched number in corporate finance — they tell you whether a company actually made money after all expenses.',
+    interpret: 'Compare reported earnings to analyst estimates. A "beat" (higher than expected) typically lifts the stock; a "miss" pressures it. But magnitude matters: beating by 1% is noise, beating by 15% is a signal.',
+    marketEffect: 'Positive earnings surprises lift stocks 2-8% on average. Negative surprises cause 3-12% drops. The effect often spills into sector peers within 24 hours.',
+  },
+  'revenue growth': {
+    term: 'Revenue Growth',
+    why: 'Revenue growth tells you if demand is real. You can cut costs to boost earnings, but sustained revenue growth requires customers actually buying more.',
+    interpret: 'Look at year-over-year growth, not quarter-over-quarter, to avoid seasonal noise. Accelerating growth is bullish; decelerating growth is a warning even if absolute numbers look impressive.',
+    marketEffect: 'Companies with accelerating revenue growth command premium valuations. A deceleration from 30% to 20% can crater a stock even though the company is still growing.',
+  },
+  'price target': {
+    term: 'Price Target',
+    why: 'Price targets from analysts signal where Wall Street thinks a stock is headed over the next 12 months. They move billions in institutional capital.',
+    interpret: 'Never take a single target as gospel. Look at the range — the gap between highest and lowest tells you disagreement level. Wide ranges mean high uncertainty.',
+    marketEffect: 'Major banks raising targets can trigger 2-5% rallies. Downgrades cause outsized 5-10% drops because sell-side rarely issues negative calls — when they do, it means something.',
+  },
+  'interest rates': {
+    term: 'Interest Rates',
+    why: 'Interest rates are the price of money itself. They affect every asset class, every business, and every consumer on the planet.',
+    interpret: 'Rising rates compress growth stock valuations (future earnings worth less today) and boost bank margins. Falling rates do the opposite. Watch the rate of change, not just the level.',
+    marketEffect: 'A surprise rate hike can drop equities 2-5% in a session. The real action is in expectations: if markets expect a cut and do not get one, it trades like a hike.',
+  },
+  inflation: {
+    term: 'Inflation',
+    why: 'Inflation erodes purchasing power and forces central banks to raise rates — making it the key macro variable for all asset prices simultaneously.',
+    interpret: 'Core inflation (excluding food and energy) matters more for policy than headline. Month-over-month changes spot turning points faster than year-over-year comparisons.',
+    marketEffect: 'Higher-than-expected inflation readings drop equities 1-3% and lift bond yields. Cooling inflation triggers relief rallies, especially in rate-sensitive sectors like tech and real estate.',
+  },
+  'market cap': {
+    term: 'Market Capitalisation',
+    why: 'Market cap tells you the total value the market assigns to a company. It determines index membership and how institutional money mechanically flows into the stock.',
+    interpret: 'Market cap = share price x shares outstanding. A high share price with few shares can mean a modest market cap. Use it to compare companies of different share prices on equal footing.',
+    marketEffect: 'Crossing major thresholds (joining the S&P 500, moving from mid-cap to large-cap) triggers index fund buying that can lift a stock 3-7% from passive allocation alone.',
+  },
+  'P/E ratio': {
+    term: 'P/E Ratio',
+    why: 'The price-to-earnings ratio is the most cited valuation metric on the planet. It tells you how much investors pay per dollar of earnings.',
+    interpret: 'A P/E of 20 means investors pay $20 for every $1 of annual earnings. Compare within the same sector — tech at 30x is not the same as a utility at 30x. Forward P/E (using estimated future earnings) is more actionable than trailing.',
+    marketEffect: 'P/E expansion drives bull markets. P/E compression drives bear markets. The S&P 500 historical average is roughly 16-18x — anything significantly above signals optimism, anything below signals fear.',
+  },
+  guidance: {
+    term: 'Forward Guidance',
+    why: 'Guidance is management telling you what they expect next quarter. The market often reacts more to guidance than to the actual earnings number.',
+    interpret: 'Companies that beat earnings but lower guidance often see their stock drop. The market is forward-looking: last quarter is priced in. What matters is where earnings are going.',
+    marketEffect: 'Raised guidance adds 3-8% on top of any earnings-beat reaction. Lowered guidance can erase strong results and trigger 5-15% sell-offs. Guidance moves matter more than the beat.',
+  },
+  GDP: {
+    term: 'Gross Domestic Product',
+    why: 'GDP measures total economic output — the broadest indicator of whether an economy is growing, stagnating, or contracting. Everything else flows from this.',
+    interpret: 'Two consecutive negative quarters is the informal recession definition. But initial readings get heavily revised — the second and third revisions often tell a different story. Focus on trends, not single prints.',
+    marketEffect: 'GDP surprises move markets 0.5-2%. Recession signals can trigger sustained bear markets as corporate earnings decline in lockstep with economic activity.',
+  },
+  unemployment: {
+    term: 'Unemployment Rate',
+    why: 'Employment tells you whether consumers have income to spend. Consumer spending drives roughly 70% of GDP in developed economies — no jobs means no spending.',
+    interpret: 'The headline rate excludes discouraged workers and can be misleading. Watch labor force participation alongside it. Weekly jobless claims are a faster signal than the monthly report.',
+    marketEffect: 'Lower-than-expected unemployment is paradoxically bad in a rate-hike cycle (Fed stays hawkish). In normal cycles, strong jobs data lifts consumer discretionary and financials 1-3%.',
+  },
+  'ETF inflows': {
+    term: 'ETF Inflows',
+    why: 'ETF inflow data reveals where money is actually flowing. Actions speak louder than analyst opinions — follow the capital, not the commentary.',
+    interpret: 'Sustained inflows into sector ETFs signal conviction. But watch for crowding: when everyone is in the same trade, the reversal is violent. Outflows from safe-havens into equity ETFs signal expanding risk appetite.',
+    marketEffect: 'Record ETF inflows can sustain rallies for weeks through mechanical passive buying demand. The Bitcoin ETF cycle demonstrated how flows can completely dominate price action.',
+  },
+  volatility: {
+    term: 'Volatility',
+    why: 'Volatility measures how much prices swing. It is both a risk metric and an opportunity indicator depending on your position and time horizon.',
+    interpret: 'The VIX measures expected 30-day S&P 500 volatility. Below 15 is complacent; above 25 is elevated fear; above 40 is panic. Low VIX does not mean safe — it often precedes sharp corrections because nobody is buying protection.',
+    marketEffect: 'VIX spikes above 30 correlate with 5-15% equity drawdowns. Contrarian traders buy when VIX is elevated because it often marks capitulation. Sustained low VIX environments tend to end abruptly.',
+  },
+  'yield curve': {
+    term: 'Yield Curve',
+    why: 'The yield curve — the gap between long-term and short-term government bond rates — is the single best recession predictor in financial history. Full stop.',
+    interpret: 'Normal: long rates above short rates (healthy). Inverted: short rates above long rates (recession warning). The curve has inverted before every US recession since 1955 with only one false signal.',
+    marketEffect: 'Inversions trigger defensive rotations out of cyclicals into utilities, healthcare, and consumer staples. The actual recession typically arrives 6-18 months after inversion begins.',
+  },
+  buyback: {
+    term: 'Share Buyback',
+    why: 'When a company buys back shares, it reduces the share count, which boosts EPS even if total earnings stay flat. It is financial engineering, not organic growth.',
+    interpret: 'Buybacks funded from free cash flow are bullish (genuine capital return). Buybacks funded by debt are a red flag (leveraging the balance sheet to inflate metrics). Check whether EPS growth comes from revenue or a shrinking denominator.',
+    marketEffect: 'Buyback announcements lift stocks 2-5%. Sustained programs create a price floor because the company itself becomes a consistent buyer in the open market.',
+  },
+  'trade deficit': {
+    term: 'Trade Deficit',
+    why: 'The trade balance between nations affects currency values, import prices, and the competitiveness of every domestic industry. It is the scoreboard of global commerce.',
+    interpret: 'A widening deficit weakens the domestic currency (more money flowing out than in). For import-heavy economies, a weaker currency raises inflation; for exporters, weakness boosts competitiveness.',
+    marketEffect: 'Unexpected trade data moves currency pairs 0.5-1.5% with knock-on effects for multinational earnings. Tariff announcements create immediate 3-8% sector volatility.',
+  },
+};
+
+// ── Market Bulletins (stocks / equities) ──
+export const MARKET_BULLETINS: BulletinTemplate[] = [
+  {
+    id: 'apple-earnings',
+    source: 'wall-street-jest',
+    terms: ['earnings', 'revenue growth', 'price target'],
+    headline: 'Apple tops estimates with services strength',
+    summary: 'Cupertino posts record services revenue as hardware steadies; analysts lift price targets.',
+    sentiment: 'bullish',
+    category: 'markets',
+    assets: ['AAPL', 'MSFT', 'NVDA'],
+    impact: 'Mega-cap tech leadership may broaden the rally.',
+    projection: 'Past beats of this magnitude lifted AAPL peers 4-9% over the following sessions.',
+    body: [
+      'The Wall Street Jest reports Tonald Drump calling it the "iPhone for your portfolio" after services hit all-time highs.',
+      'Research shop The Economost notes cloud and AI attach rates are rising across Apple and Microsoft ecosystems.',
+      'Desk chatter suggests hardware margins stabilizing helps smooth volatility across mega-cap peers.',
+      'Historically, strong Apple prints supported sentiment in NVDA and MSFT as capital rotated across the complex.',
+      'Giga Sachs upgraded AAPL to "Conviction Buy" faster than you can say revenue growth, slapping a price target north of $220 on what they call "the ultimate toll bridge in tech."',
+      'MSFT bulls piled in on sympathy, arguing that if Cupertino\'s services engine is firing, Redmond\'s Azure-plus-Office bundle isn\'t far behind. The earnings read-through is basically a rising-tide memo.',
+      'NVDA, meanwhile, quietly added another $40 billion in market cap during the after-hours session, because apparently every positive headline in tech is also an AI chip story now.',
+      'J.P. Organ\'s derivatives desk flagged the sharpest call-skew compression in AAPL options since last January\'s blowout, suggesting institutional money is re-underwriting the price target consensus higher.',
+      'Morgan Stan-d Up\'s weekly flow tracker showed mega-cap tech attracting the largest inflows in six months, with AAPL alone pulling $1.2 billion in passive allocations off the earnings beat.',
+      'Bottom line from the Jest trading floor: when Apple prints like this, the whole Nasdaq cap table gets a permission slip to re-rate. Buckle up for price target revisions through the week.',
+    ],
+    drift: 0.012,
+  },
+  {
+    id: 'auto-recall',
+    source: 'fax-news',
+    terms: ['volatility'],
+    headline: 'EV recall headlines rattle automakers',
+    summary: 'Regulators probe braking software; delivery targets reiterated but investors trim exposure.',
+    sentiment: 'bearish',
+    category: 'markets',
+    assets: ['TSLA', 'RIVN', 'GM', 'F'],
+    impact: 'Autos may see wider spreads until clarity emerges.',
+    projection: 'Comparable recalls shaved 6-12% from EV names before stabilizing on firm guidance.',
+    body: [
+      'Satirical inspector Vladimir Protein joked that regulators "don\'t like surprise self-driving donuts".',
+      'TSLA, RIVN, and legacy peers GM and F outlined over-the-air patch timelines to soothe investors.',
+      'Options desks at Morgan Stan-d Up report elevated put skew across autos.',
+      'Historically, delivery beats in subsequent months helped reverse the drawdown once fixes rolled out.',
+      'Folks, the mainstream media wants you panicking about a software glitch while ignoring the real story: American automakers are building the future and regulators are playing catch-up. The volatility is manufactured.',
+      'TSLA shorts are having a field day, but Fax News reminds viewers that every single EV recall scare in the last three years ended with the stock higher ninety days later. Every. Single. One.',
+      'GM and F are getting dragged along for the ride despite running completely different platforms. That\'s what happens when algorithms trade sector baskets instead of reading the actual NHTSA filings.',
+      'Black Pebble\'s auto analyst told Fax News that institutional holders are using the volatility to add, not flee. "Smart money buys the recall dip," she said, "dumb money sells the headline."',
+      'Meanwhile RIVN\'s short interest just hit a six-month high, which contrarian traders know is basically a coiled spring waiting for a delivery beat to trigger the squeeze.',
+      'The bottom line for hardworking American investors: don\'t let bureaucrats and their press releases shake you out of positions. The patch ships, the cars drive, and the stocks recover. That\'s how this always works.',
+    ],
+    drift: -0.015,
+  },
+  {
+    id: 'cloud-spend',
+    source: 'the-economost',
+    terms: ['revenue growth', 'P/E ratio'],
+    headline: 'Enterprise cloud spend re-accelerates',
+    summary: 'CIO surveys show budgets loosening for AI workloads; data-platform vendors cheer.',
+    sentiment: 'bullish',
+    category: 'markets',
+    assets: ['MSFT', 'AMZN', 'GOOGL', 'SNOW', 'DDOG'],
+    impact: 'Software and data platforms may catch a multi-session bid.',
+    projection: 'Similar survey inflections in 2023 preceded a 7-14% upswing in hyperscalers and observability names.',
+    body: [
+      'The Economost leaked a memo from "Giga Sachs" showing AI budgets up 11% QoQ.',
+      'SNOW and DDOG spokespeople say pipelines are the fullest since early 2022.',
+      'Block-chain skeptic Tonald Drump quipped that "cloud is the new cloud" but traders still bought.',
+      'Hyperscaler optimism often spills into data/security vendors as procurement cycles reopen.',
+      'The more interesting question, as ever, is whether this revenue growth re-acceleration is durable or merely a sugar rush from front-loaded AI pilot budgets. CIOs surveyed by The Economost suggest the former, though CIOs have been wrong before.',
+      'MSFT and AMZN now sport P/E ratios that would have caused nosebleeds a decade ago, yet relative to their cloud growth trajectories, the multiples look almost quaint. GOOGL, forever the bridesmaid in cloud market share, is quietly closing the gap.',
+      'SNOW\'s consumption model means every uptick in data pipeline activity translates almost instantly to the income statement, a fact not lost on momentum desks at J.P. Organ who doubled their position last week.',
+      'DDOG, meanwhile, has become the observability layer that enterprises did not know they needed until their AI workloads started misbehaving at scale. Its land-and-expand motion remains a textbook case of revenue growth compounding.',
+      'What concerns The Economost\'s leader column is concentration risk: three hyperscalers now control the plumbing for most of the world\'s AI ambitions. That is either magnificent efficiency or a systemic vulnerability, depending on your priors.',
+      'For investors with a twelve-month horizon, the playbook is familiar: ride the procurement cycle, trim into the P/E ratio expansion, and rotate into the next cohort of infrastructure beneficiaries before the consensus catches on.',
+    ],
+    drift: 0.01,
+  },
+  {
+    id: 'defense-bill',
+    source: 'global-herald-tribune',
+    terms: ['guidance'],
+    headline: 'Defense bill fast-tracked through committee',
+    summary: 'New spending package boosts aerospace and security allocations; contractors guide higher.',
+    sentiment: 'bullish',
+    category: 'markets',
+    assets: ['LMT', 'BA', 'GE'],
+    impact: 'Defense complex could outperform broader indices.',
+    projection: 'Similar bills in past cycles lifted primes 5-10% over two weeks.',
+    body: [
+      'Committee chair Vladimir Protein called it the "Peace Through Procurement Act" on late-night finance satire.',
+      'Analysts at The Economost flagged upside to long-cycle backlogs at LMT and BA.',
+      'GE Aerospace notes supply-chain improvements unlocking deliveries.',
+      'Historic analogs show defense primes grinding higher into funding clarity.',
+      'The Global Herald Tribune understands the bill allocates an additional $18 billion to next-generation fighter programmes and hypersonic defence systems, with LMT positioned as lead integrator on at least two major tranches.',
+      'BA\'s troubled commercial division may finally benefit from the halo effect: Pentagon confidence in airframe production tends to stiffen management guidance across both military and civilian segments.',
+      'European allies have signalled they will increase co-procurement under NATO burden-sharing frameworks, a development that Giga Sachs describes as "the transatlantic multiplier" in its latest defense sector note.',
+      'GE\'s engine order book now stretches into the next decade, and the Herald Tribune\'s sources suggest guidance revisions are imminent once the appropriations committee confirms the multi-year funding profile.',
+      'Critics on the left argue the bill crowds out social spending, while deficit hawks on the right fret about the borrowing implications. Markets, as usual, have decided that someone else\'s problem is their opportunity.',
+      'For internationally minded portfolios, the read-through is clear: when Washington opens the defence chequebook, prime contractors deliver both earnings and guidance upgrades. Position accordingly.',
+    ],
+    drift: 0.009,
+  },
+  {
+    id: 'ad-privacy',
+    source: 'orient-express-markets',
+    terms: ['revenue growth', 'market cap'],
+    headline: 'Ad privacy rules resurface; platforms caution on near-term impact',
+    summary: 'Proposed tracking curbs push marketers to diversify; social and streaming names guide prudently.',
+    sentiment: 'neutral',
+    category: 'markets',
+    assets: ['META', 'NFLX', 'DIS'],
+    impact: 'Engagement metrics may face scrutiny; volatility elevated.',
+    projection: 'Prior drafts pulled META and streaming peers 4-8% before a recovery on clearer rules.',
+    body: [
+      'The Wall Street Jest quotes an agency exec calling the draft "Clampdownistan 2.0".',
+      'META lobbyists counter that small-business budgets remain resilient.',
+      'Streaming incumbents DIS and NFLX highlight ad-supported tier momentum.',
+      'Marketers historically rebalance spend but return once measurement stabilizes.',
+      'Orient Express Markets sees the regulation as a net positive for Asia-Pacific ad platforms that already operate under stricter data regimes. The competitive moat around META\'s targeting engine may narrow, but market cap sheer inertia keeps it dominant.',
+      'NFLX\'s ad-tier is still in its toddler phase, generating barely 8% of total revenue growth, yet Morgan Stan-d Up projects it could reach 20% within two years if privacy rules actually force brands toward premium, brand-safe inventory.',
+      'DIS has quietly assembled one of the richest first-party data sets in media through its parks, cruise lines, and streaming bundles. Privacy constraints may ironically reward companies that own the customer relationship end-to-end.',
+      'Giga Sachs published a note titled "Privacy Is the New Moat" arguing that platforms with consent-based data architectures will command higher CPMs once the regulatory dust settles, lifting revenue growth for the prepared.',
+      'From Tokyo to Singapore, tech investors tell Orient Express Markets they view the draft as another round of Western regulatory theater that will be watered down before implementation. The market cap impact, they argue, is a buying opportunity.',
+      'The pattern is well-documented: privacy scares compress ad-tech multiples for two to four weeks, lobbyists secure carve-outs, and the stocks recover. Smart money in the region is already positioning for the snapback.',
+    ],
+    drift: -0.006,
+  },
+  {
+    id: 'rate-cut-hopes',
+    source: 'the-contrarian-post',
+    terms: ['interest rates', 'inflation', 'yield curve'],
+    headline: 'Central bank minutes hint at slower hikes',
+    summary: 'Futures price in a gentler path; rate-sensitive sectors perk up.',
+    sentiment: 'bullish',
+    category: 'markets',
+    assets: ['WMT', 'HD', 'PG', 'KO', 'AAPL'],
+    impact: 'Defensives and consumer names may enjoy a relief bid.',
+    projection: 'Gentler minutes in past cycles delivered 3-6% pops in staples and big-box retailers.',
+    body: [
+      'Tonald Drump told The Economost he "prefers his rates like his golf scores: lower."',
+      'Staples giants PG and KO typically firm up when real yields cool.',
+      'Rate relief often boosts home improvement spend, aiding WMT and HD.',
+      'AAPL and other quality names can benefit as discount rates ease on cash flows.',
+      'Don\'t be fooled. The Contrarian Post has seen this movie before: the Fed leaks dovish minutes, equities rip, and six weeks later inflation prints hot and the whole yield curve inverts again. Rinse, repeat, cry.',
+      'PG and KO rallying on interest rates hopes is peak late-cycle copium. These are glorified bond proxies trading at 25x earnings because the market has nowhere else to hide. The inflation genie isn\'t going back in the bottle.',
+      'WMT and HD are pricing in rate cuts that haven\'t happened yet while consumer credit card delinquencies quietly hit a 12-year high. But sure, let\'s celebrate because some Fed governor used the word "patient" in a footnote.',
+      'Black Pebble\'s fixed-income desk is telling clients to extend duration, which is exactly what they said in March 2023 before the yield curve threw a tantrum and handed them a 9% drawdown. Contrarian readers know better.',
+      'AAPL gets lumped into the "rate-sensitive quality" bucket now, apparently, because nothing says interest rates play like a $3 trillion company that prints cash regardless of what the Fed does. The logic is circular and the positioning is crowded.',
+      'Here\'s the uncomfortable truth: real inflation is running hotter than the official prints, the deficit is ballooning, and the only thing holding up this house of cards is the market\'s Pavlovian response to dovish minutes. Protect your downside.',
+    ],
+    drift: 0.007,
+  },
+];
+
+// ── Crypto Bulletins ──
+export const CRYPTO_BULLETINS: BulletinTemplate[] = [
+  {
+    id: 'bitcoin-etf',
+    source: 'the-economost',
+    terms: ['ETF inflows', 'volatility'],
+    headline: 'Spot bitcoin ETF inflows accelerate',
+    summary: 'New inflows lift BTC and blue-chip chains as allocators size up digital assets.',
+    sentiment: 'bullish',
+    category: 'crypto',
+    assets: ['BTC', 'ETH', 'SOL'],
+    impact: 'Majors may extend momentum while alts follow with beta.',
+    projection: 'Past ETF catalysts lifted BTC 8-20% with ETH/SOL outperformance.',
+    body: [
+      'The Economost jokes that Tonald Drump called it "digital gold with ticker tape".',
+      'Custodians report record creations, mirroring early-2024 ETF ramps.',
+      'Desk chatter notes basis tightening across CME futures as spot demand builds.',
+      'Historically, first-wave inflows spill into ETH and L2 ecosystems as liquidity rises.',
+      'Black Pebble\'s digital assets division now manages more BTC than some nation-states hold in reserve, a development that The Economost finds both impressive and faintly terrifying. ETF inflows of this magnitude reshape market microstructure.',
+      'The crucial question is whether these are "tourist" allocations from balanced funds chasing momentum, or genuine strategic positioning by institutions that plan to hold through volatility cycles. Early data suggest a mix of both.',
+      'SOL has quietly become the beta trade of choice for desks wanting leveraged exposure to BTC sentiment without the basis risk of perpetuals. Its correlation to ETF inflows days is running above 0.85.',
+      'ETH\'s narrative is shifting from "ultrasound money" to "institutional settlement layer," which may lack meme appeal but resonates with the pension-fund crowd that Giga Sachs is courting with its new staking wrapper product.',
+      'Regulatory clarity, or the illusion thereof, has been the catalyst. The Economost notes that approval of spot products effectively blessed an asset class that politicians spent years calling a volatility-soaked casino.',
+      'For the sober allocator, the lesson is structural: ETF inflows create a reflexive loop where rising prices attract more inflows, which lift prices further. The music is playing. The question, as ever, is when it stops.',
+    ],
+    drift: 0.018,
+  },
+  {
+    id: 'exchange-glitch',
+    source: 'the-contrarian-post',
+    terms: ['volatility'],
+    headline: 'Major exchange halt sparks liquidity scare',
+    summary: 'Temporary outage fuels volatility; spreads widen until trading resumes.',
+    sentiment: 'bearish',
+    category: 'crypto',
+    assets: ['BTC', 'ETH'],
+    impact: 'Short-term drawdown risk as liquidity providers pull quotes.',
+    projection: 'Comparable incidents clipped majors 6-12% intraday before partial recovery.',
+    body: [
+      'Satirical regulator Vladimir Protein quips that servers were "mining downtime".',
+      'OTC desks report wider spreads while on-chain volumes spike.',
+      'Market makers reduce size until stability returns, deepening wick potential.',
+      'Prior halts often reverse once status pages stabilize and funding normalizes.',
+      'This is what happens when you build a trillion-dollar asset class on infrastructure that would embarrass a 1990s ISP. The Contrarian Post has warned for years that centralized exchanges are single points of failure, and the volatility spike proves it.',
+      'BTC dumped 8% in eleven minutes while the exchange was dark, which tells you everything about how "decentralized" this market really is. When one order book goes offline, the entire market gets liquidated in sympathy.',
+      'ETH perp funding rates went deeply negative during the outage as leveraged longs scrambled for exits through the remaining venues. The volatility was a feature, not a bug, of a market addicted to 50x leverage.',
+      'J.P. Organ\'s crypto prime brokerage quietly halted new margin extensions during the incident, a move The Contrarian Post applauds as the only sane response in a market where counterparty risk is treated as someone else\'s problem.',
+      'The exchange\'s post-mortem will inevitably blame a "cascading database failure" or some other euphemism for "we cut corners on infrastructure while pocketing billions in fees." The volatility tax, as always, falls on retail.',
+      'If you needed a reminder that not your keys means not your coins, congratulations: the market just gave you a $200 billion lesson in counterparty risk. Act accordingly.',
+    ],
+    drift: -0.014,
+  },
+  {
+    id: 'defi-burst',
+    source: 'wall-street-jest',
+    terms: ['revenue growth'],
+    headline: 'DeFi TVL climbs on new yield program',
+    summary: 'Stakers chase emissions; governance tokens jump as liquidity rotates on-chain.',
+    sentiment: 'bullish',
+    category: 'crypto',
+    assets: ['ETH', 'SOL', 'AVAX'],
+    impact: 'Layer-1s and DeFi majors could catch a bid from on-chain demand.',
+    projection: 'Similar incentive waves delivered 10-22% pops across smart-contract platforms.',
+    body: [
+      'Yield farmers in The Economost brag about "APY season 3: return of the ponzi".',
+      'Bridges light up as users migrate stablecoins to chase incentives.',
+      'Options skews flip positive on ETH as staking demand tightens float.',
+      'Earlier TVL spikes bled into L2 ecosystems before normalizing as emissions decayed.',
+      'The Wall Street Jest\'s DeFi desk — yes, they have one now — reports that SOL-based liquidity pools are hoovering up capital at a pace not seen since the summer of 2021. Revenue growth from protocol fees is actually real this time, or so the pitch decks claim.',
+      'AVAX staking yields have quietly doubled as the foundation deploys its war chest to attract mercenary capital. The market is moving in lockstep, which either signals genuine ecosystem expansion or correlated leverage. Choose your own adventure.',
+      'Giga Sachs published a research note titled "Yield Farming Is Just Carry Trade With Extra Steps," which may be the most accidentally honest thing a Wall Street bank has ever written about DeFi.',
+      'ETH gas fees spiked 40% on the yield-chasing migration, reminding everyone that Ethereum\'s revenue growth comes at the cost of its users\' sanity. The base layer is congested; the L2s are feasting.',
+      'Morgan Stan-d Up\'s prime brokerage reports that institutional DeFi allocations have tripled year-over-year, driven by funds that missed the ETF rally and are now crawling further out the risk curve for yield.',
+      'The Jest\'s editorial board offers this timeless wisdom: when APYs look too good to be true, they usually are. But in the meantime, the revenue growth is printing, the TVL charts are vertical, and nobody wants to be the first to leave the party.',
+    ],
+    drift: 0.016,
+  },
+  {
+    id: 'stablecoin-scare',
+    source: 'red-square-financial',
+    terms: ['volatility'],
+    headline: 'Stablecoin reserve questions emerge',
+    summary: 'Rumors about backing mix rattle markets; traders rotate to majors and stables with audits.',
+    sentiment: 'bearish',
+    category: 'crypto',
+    assets: ['BTC', 'ETH'],
+    impact: 'De-pegging fears can spark flight to quality and short-lived dislocations.',
+    projection: 'Historical scares trimmed 3-9% from majors intraday with quick mean reversion.',
+    body: [
+      'Tonald Drump tweets "show me the coins", sending CT into a frenzy.',
+      'Arbitrageurs monitor on-chain liquidity pools for peg drift.',
+      'Desk notes say BTC often benefits as traders rotate from stables during stress.',
+      'Prior scares normalized within days once attestations landed.',
+      'Red Square Financial reminds readers that the Western stablecoin edifice was always built on sand. Reserve composition reads like a mystery novel where every chapter raises more questions than it answers.',
+      'The volatility is instructive: when faith in dollar-pegged tokens wavers, the entire Western crypto apparatus trembles. Meanwhile, state-backed digital currencies in other jurisdictions proceed without such existential drama.',
+      'USDC scrambles to differentiate itself with monthly attestations and regulated custody, but Red Square Financial notes that "audited" and "solvent" are not synonyms, a distinction Western markets prefer to ignore.',
+      'BTC and ETH paradoxically benefit from stablecoin scares as traders flee to assets with transparent on-chain supply. The irony of "decentralized" money serving as a safe haven from supposedly stable money is not lost.',
+      'Giga Sachs and J.P. Organ have quietly expanded their own tokenized deposit programs, positioning to absorb market share if confidence in independent stablecoins continues to erode. The consolidation of crypto into traditional banking hands continues.',
+      'Perhaps the West should spend less time sanctioning other nations\' payment systems and more time ensuring their own digital dollar proxies can survive a weekend rumor. The volatility speaks for itself.',
+    ],
+    drift: -0.01,
+  },
+  {
+    id: 'layer2-boom',
+    source: 'orient-express-markets',
+    terms: ['revenue growth', 'market cap'],
+    headline: 'Layer-2 throughput hits record highs',
+    summary: 'Scaling solutions post new highs in transactions; fees drop as adoption broadens.',
+    sentiment: 'bullish',
+    category: 'crypto',
+    assets: ['ETH', 'MNT'],
+    impact: 'L2 momentum can lift ETH while selective alt L2s outperform.',
+    projection: 'Past throughput spikes preceded 6-15% moves in ETH and leading L2 tokens.',
+    body: [
+      'Developers joke that gas fees finally fit in The Economost classifieds.',
+      'Bridges report sustained inflows as users chase cheaper swaps.',
+      'Sequencer revenues surprise to the upside, hinting at durable demand.',
+      'Historic L2 growth phases often preceded broader smart-contract rallies.',
+      'Orient Express Markets sees the throughput milestone as validation of the modular blockchain thesis that Asian venture capital has been backing since 2022. ETH as a settlement layer with L2 execution on top is no longer theory; it is revenue growth in production.',
+      'MNT\'s transaction count has surged 300% quarter-over-quarter, driven by gaming and social applications that Western chains have struggled to attract. The market cap implications are significant for an ecosystem still trading at a fraction of its peers.',
+      'Giga Sachs\'s Hong Kong desk published a note arguing that L2 sequencer economics resemble toll-road concessions: predictable, scalable, and criminally undervalued by markets still pricing these tokens as speculative filler.',
+      'The fee compression story is the real headline. Sub-cent transactions make micro-payments viable at scale, unlocking use cases from content tipping to machine-to-machine settlement that were economically impossible on mainnet.',
+      'Tokyo-based funds tell Orient Express Markets they are rotating from pure ETH exposure into a barbell of ETH plus high-conviction L2 tokens, betting that the value accrual will increasingly shift to the execution layer as throughput scales.',
+      'The techno-optimist case writes itself: cheaper fees bring more users, more users generate more revenue growth, and higher revenue justifies higher market cap. For once, the virtuous cycle in crypto might actually be virtuous.',
+    ],
+    drift: 0.012,
+  },
+];
+
+// ── Macro / Lab Bulletins ──
+export const MACRO_BULLETINS: BulletinTemplate[] = [
+  {
+    id: 'lab-housing',
+    source: 'global-herald-tribune',
+    terms: ['GDP', 'interest rates'],
+    headline: 'Housing data beats expectations',
+    summary: 'New permits rise; homebuilders guide cautiously but pricing holds.',
+    sentiment: 'bullish',
+    category: 'macro',
+    assets: ['HD', 'WMT', 'AAPL'],
+    body: [
+      'The Global Herald Tribune can confirm that new housing permits rose 4.2% month-on-month, comfortably exceeding the consensus range and prompting strategists at Giga Sachs to revise their GDP growth trackers upward.',
+      'Central bank watchers note that interest rates remain elevated by historical standards, yet demand for single-family builds has proved remarkably resilient. Mortgage applications ticked higher for the third consecutive week.',
+      'HD reported same-store gains in lumber and finishing materials, suggesting the permit surge is already translating into real activity on the ground. Analysts at Morgan Stan-d Up upgraded the stock to overweight on Tuesday.',
+      'WMT\'s home-goods division flagged higher foot traffic in suburban stores adjacent to new developments. The retail giant reiterated full-year guidance, citing housing-driven basket growth as an underappreciated tailwind.',
+      'AAPL benefits indirectly: new homeowners tend to outfit kitchens and living rooms with connected devices, a tailwind the Cupertino giant rarely quantifies but institutional desks quietly model into their GDP-linked scenarios.',
+      'Secretary of Commerce Tonald Drump declared the data "a total vindication of pro-builder policy," though economists at The Economost pointed out that municipal zoning reform played a larger role than any federal initiative.',
+      'Homebuilder sentiment indices have diverged from pricing data in recent quarters; permits are rising, yet builders guide cautiously on margins as lumber futures whipsaw amid tariff speculation and cross-border supply concerns.',
+      'Interest rates will remain the swing factor. If the curve steepens further, mortgage affordability could erode the demand base that drove today\'s beat. For now, the housing complex trades with a constructive tone.',
+      'Cross-border comparisons are instructive: Eurozone housing starts remain depressed under tighter ECB policy, making the U.S. outperformance all the more striking to global allocators re-weighting portfolios toward dollar-denominated assets.',
+      'The Tribune\'s base case is that GDP estimates edge higher through year-end if housing activity sustains this pace, though the interplay between interest rates and supply constraints remains the key variable to watch.',
+    ],
+    drift: 0.006,
+  },
+  {
+    id: 'lab-energy',
+    source: 'fax-news',
+    terms: ['inflation', 'trade deficit'],
+    headline: 'Energy prices spike on refinery outage',
+    summary: 'Supply hiccup lifts fuel costs; airlines hedge while logistics firms flag margin pinch.',
+    sentiment: 'bearish',
+    category: 'macro',
+    assets: ['UPS', 'BA', 'GE'],
+    body: [
+      'BREAKING: FAX News Financial can exclusively report that a catastrophic refinery outage on the Gulf Coast has sent energy prices SKYROCKETING, and hardworking Americans are about to feel every single penny of it at the pump.',
+      'This is what happens when you wage war on domestic energy production. Inflation was already crushing families, and now a supply shock threatens to push fuel costs into territory not seen since the last time the radical regulators got their way.',
+      'UPS flagged that fuel surcharges will need to be revisited if diesel stays above $4.20 a gallon. The logistics giant\'s margins are already under siege from the worst trade deficit environment in a generation.',
+      'BA and GE\'s aerospace divisions are hedging jet fuel aggressively, with airline customers demanding locked-in pricing through year-end. Industry insiders tell FAX News this is "panic-level procurement" not seen in two years.',
+      'Tonald Drump called into the morning show to declare that "we had the greatest energy independence in history, and they threw it away." His plan to fast-track drilling permits would be the single best inflation fighter available.',
+      'Meanwhile, Vladimir Protein sits in Moscow watching global fuel prices climb and laughing all the way to the central bank. Every dollar added to a barrel of crude widens the trade deficit and strengthens his leverage.',
+      'The inflation numbers next month are going to be UGLY, folks. Energy feeds into everything: groceries, shipping, manufacturing. The ripple effects of this outage will hammer consumer sentiment for weeks.',
+      'Morgan Stan-d Up\'s energy desk quietly raised their crude target by $8, while Giga Sachs told institutional clients to overweight energy infrastructure. The smart money sees what Washington refuses to admit.',
+      'FAX News Financial\'s position remains unchanged: energy security IS national security. Until policymakers stop treating domestic producers like the enemy, Americans will keep paying the price at the pump and in the trade deficit.',
+    ],
+    drift: -0.01,
+  },
+  {
+    id: 'lab-retail',
+    source: 'the-economost',
+    terms: ['GDP', 'unemployment'],
+    headline: 'Retail foot traffic accelerates into holiday season',
+    summary: 'Early promos pull demand forward; big-box leaders reiterate full-year outlook.',
+    sentiment: 'bullish',
+    category: 'macro',
+    assets: ['WMT', 'COST', 'DIS'],
+    body: [
+      'The Economost observes that American consumers, much like nature itself, abhor a vacuum. Holiday foot traffic surged 6.8% above last year\'s levels, suggesting that GDP growth forecasts may yet prove too conservative.',
+      'WMT\'s early promotional blitz pulled demand forward by nearly two weeks, a strategy that delights the quarterly earnings crowd but raises the uncomfortable question of whether January will look correspondingly barren.',
+      'COST reported that membership renewals hit an all-time high, a metric the Kirkland cognoscenti regard as more sacred than any unemployment report. Warehouse clubs thrive when consumers trade down intelligently rather than stop spending entirely.',
+      'DIS parks division posted record pre-bookings for the holiday window, an underappreciated barometer of middle-class confidence. When families commit to Orlando, they are making a GDP-positive statement about disposable income.',
+      'Unemployment remains historically low, which is to say that the labour market has not yet received the memo about an impending downturn. Wage growth continues to support discretionary spending, much to the chagrin of perma-bears.',
+      'Giga Sachs raised its holiday spending estimate by $12 billion, noting that credit card data shows acceleration in electronics and apparel. Morgan Stan-d Up followed suit, though with characteristically more measured language.',
+      'Tonald Drump claimed personal credit for the spending surge, a position that The Economost finds roughly as credible as attributing good weather to sound fiscal policy. Consumer behaviour is structural, not presidential.',
+      'Cross-border comparisons remain instructive: European retail traffic is flat, Chinese consumers are saving aggressively, and it is the American shopper who once again shoulders the burden of global GDP arithmetic.',
+      'The risk, as always, is that early promotions merely borrow from future quarters. If post-holiday data disappoints, today\'s euphoria will look like a sugar rush rather than a sustainable acceleration.',
+    ],
+    drift: 0.007,
+  },
+  {
+    id: 'lab-cyber',
+    source: 'orient-express-markets',
+    terms: ['revenue growth', 'P/E ratio'],
+    headline: 'Security budgets climb after headline breach',
+    summary: 'CISOs add spend for endpoint and cloud protection; vendors tout pipeline strength.',
+    sentiment: 'bullish',
+    category: 'macro',
+    assets: ['CRWD', 'NET', 'DDOG'],
+    body: [
+      'Orient Express Markets reports that enterprise security budgets across Asia-Pacific surged 14% quarter-on-quarter following a high-profile breach at a major semiconductor foundry. CISOs are no longer debating whether to spend; the question is how fast they can deploy.',
+      'CRWD saw its pipeline swell to record levels after the incident, with revenue growth estimates being revised upward across the sell-side. The stock\'s P/E ratio looks stretched at 85x, but bulls argue the addressable market is still in early innings.',
+      'NET\'s zero-trust platform is winning mandates from Japanese and Korean conglomerates that previously relied on legacy on-premise firewalls. Supply-chain security audits are now a board-level agenda item across the region.',
+      'DDOG\'s observability stack is being bundled with security monitoring by several large systems integrators. Analysts at Giga Sachs raised their price target, citing cloud-native attach rates that keep surprising to the upside.',
+      'The breach itself reportedly originated through a third-party logistics vendor, underscoring the expanding attack surface that drives revenue growth across the entire endpoint-to-cloud security value chain.',
+      'Tonald Drump weighed in from a campaign rally, calling cybersecurity "the most important thing, maybe ever" before pivoting to unrelated infrastructure talking points. Markets shrugged.',
+      'Taiwan\'s CERT issued a joint advisory with counterparts in Seoul and Singapore, recommending zero-trust architecture for all critical supply-chain participants. The mandate is a structural tailwind for vendors with APAC distribution.',
+      'P/E ratios across the cybersecurity complex remain elevated by historical standards, but Orient Express Markets notes that revenue growth durability justifies the premium. When the threat landscape expands, buyers do not comparison-shop on price.',
+      'Morgan Stan-d Up\'s Asia tech desk flagged a potential second-order benefit: enterprises upgrading security infrastructure often modernize adjacent IT stacks simultaneously, lifting observability and cloud-networking names in tandem.',
+    ],
+    drift: 0.009,
+  },
+  {
+    id: 'lab-europe',
+    source: 'the-contrarian-post',
+    terms: ['GDP', 'yield curve'],
+    headline: 'Eurozone PMI softens, exporters guide cautiously',
+    summary: 'Industrial orders slow; FX tailwinds help multinational tech giants.',
+    sentiment: 'neutral',
+    category: 'macro',
+    assets: ['SAP', 'SONY', 'TM', 'HMC'],
+    body: [
+      'The Contrarian Post has been warning about Eurozone fragility for months, and now the PMI print confirms what the yield curve has been screaming: the industrial core is cracking.',
+      'Germany\'s factory orders fell for the fourth consecutive month. The bureaucrats in Brussels keep talking about "soft landings" while GDP revisions quietly trend negative behind the curtain.',
+      'SAP managed to guide above consensus, but only because FX tailwinds from a weaker euro flattered what was otherwise tepid organic revenue growth. Strip out the currency effects and the picture darkens considerably.',
+      'SONY and TM are riding the same translation trick. When your home currency depreciates, your dollar-denominated earnings look heroic. It is not operational excellence; it is arithmetic.',
+      'HMC flagged rising input costs and cautious North American demand, yet the stock barely budged. Markets have become so conditioned to central bank backstops that genuine warning signals get dismissed as noise.',
+      'The yield curve in Europe is inverting at the short end again, a pattern that preceded every continental recession since 1998. But Giga Sachs assures us this time is different. It never is.',
+      'Tonald Drump told reporters that Europe\'s slowdown "makes our GDP numbers look even more tremendous," missing the point that interconnected trade deficits eventually drag everyone down together.',
+      'Vladimir Protein\'s energy leverage over European industry remains the elephant in the room. Natural gas storage levels are adequate for now, but one cold snap reshuffles the entire macro calculus.',
+      'Exporters guiding cautiously is institutional code for "we have no visibility." When management teams stop giving point estimates and switch to ranges, the Contrarian Post pays very close attention.',
+    ],
+    drift: -0.004,
+  },
+];
+
+// ── All bulletin pools combined ──
+export const ALL_BULLETINS: BulletinTemplate[] = [
+  ...MARKET_BULLETINS,
+  ...CRYPTO_BULLETINS,
+  ...MACRO_BULLETINS,
+];
+
+// ── Category labels ──
+export const BULLETIN_CATEGORIES = [
+  { id: 'all', label: 'All' },
+  { id: 'markets', label: 'Markets' },
+  { id: 'crypto', label: 'Crypto' },
+  { id: 'macro', label: 'Macro' },
+] as const;

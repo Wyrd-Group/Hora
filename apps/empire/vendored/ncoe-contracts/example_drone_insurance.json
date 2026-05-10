@@ -1,0 +1,130 @@
+{
+  "venture_id": "drone-insurance-2026-04-27-001",
+  "pitch": "B2C+B2B insurance for hobbyist and commercial drones",
+  "description": "Underwrite drone-flight risk policies. Players price premiums against weather feeds + accident data and pay out claims when crashes are reported in-game.",
+  "market_summary": "Hobbyist drone market growing 18%/yr; AEGIS in-game proxy: ~5K active player drones. No incumbent insurance product.",
+  "starting_capital": 15000,
+  "target_eta_mvp_days": 14,
+  "target_buyer": "BOTH",
+  "difficulty": 3,
+  "implementation_pieces_required": [
+    {
+      "kind": "financial_product",
+      "purpose": "premium_calculator",
+      "required": true,
+      "description": "Risk-priced policy contracts",
+      "interface": {
+        "visibility": "public",
+        "callable_by_other_code": true,
+        "input_schema": null,
+        "output_schema": null,
+        "refresh_seconds_min": null,
+        "sla": "subscribed"
+      }
+    },
+    {
+      "kind": "business_automation",
+      "purpose": "risk_engine",
+      "required": true,
+      "description": "Adjust premiums from telemetry",
+      "interface": null
+    },
+    {
+      "kind": "ai_agent",
+      "purpose": "underwriting_agent",
+      "required": true,
+      "description": "Athena variant for drone risk",
+      "interface": null
+    },
+    {
+      "kind": "ui_panel",
+      "purpose": "customer_onboarding",
+      "required": true,
+      "description": "Form to buy a policy",
+      "interface": null
+    },
+    {
+      "kind": "business_automation",
+      "purpose": "claims_processing",
+      "required": true,
+      "description": "Pays out on crash event",
+      "interface": null
+    }
+  ],
+  "spec_version": "1.0",
+  "generated_at": "2026-04-27T16:15:20.444489+00:00",
+  "source": {
+    "pipeline": "ncoe_multi_agent",
+    "pipeline_version": "0.1.0",
+    "domain": "finance",
+    "seed": 42,
+    "problem_hash": null
+  },
+  "top_objections": [
+    "Adverse selection",
+    "Claims fraud at small scale",
+    "Reinsurance pool needed for correlated weather events"
+  ],
+  "implementation_pieces_optional": [
+    {
+      "kind": "data_feed",
+      "purpose": "reinsurance_pricing_data",
+      "required": false,
+      "description": "Curated weather + accident feed",
+      "interface": {
+        "visibility": "subscribers",
+        "callable_by_other_code": true,
+        "input_schema": null,
+        "output_schema": null,
+        "refresh_seconds_min": 60,
+        "sla": "subscribed"
+      }
+    }
+  ],
+  "substrate_briefings": [
+    {
+      "title": "Drone Risk Assessment Basics",
+      "purpose": "Help buyers understand premium drivers",
+      "estimated_minutes": 5,
+      "format": "5_min_read",
+      "athena_prompt_seed": "Walk a non-expert through the 4 risk factors that move a drone insurance premium."
+    }
+  ],
+  "win_conditions": {
+    "first_revenue_within_days": 7,
+    "survive_days": 30,
+    "profitability_ratio_target": 1.5,
+    "exit_multiple_target": 5,
+    "custom": []
+  },
+  "telemetry_capture": {
+    "athena_chat_logs": true,
+    "code_versions": true,
+    "pricing_decisions": true,
+    "customer_telemetry": true,
+    "pivot_events": true,
+    "ui_iteration_count": true,
+    "per_piece_metrics": true,
+    "generation_metadata": true
+  },
+  "contribution_scoring": {
+    "outcome_quality": 0.3,
+    "originality": 0.25,
+    "adoption_in_compile": 0.2,
+    "peer_engagement": 0.15,
+    "time_invested": 0.1
+  },
+  "spinout_policy": {
+    "spinout_eligible": true,
+    "contributor_equity_pool": 0.1,
+    "top_contributors_invited": 10,
+    "jurisdiction": "PT"
+  },
+  "tags": [
+    "insurance",
+    "B2C",
+    "B2B",
+    "drones",
+    "consumer-fintech"
+  ]
+}

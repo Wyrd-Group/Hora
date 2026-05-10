@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quadratic Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { mono: ['JetBrains Mono', 'monospace'], sans: ['Inter', 'sans-serif'] },
+          colors: {
+            bg: { DEFAULT: '#0C0B0A', card: 'rgba(24,22,18,0.85)', hover: 'rgba(24,22,18,0.95)' },
+            ivory: { DEFAULT: '#E8E0D0', muted: '#9C8E7E', dim: '#6B5F52' },
+            accent: { emerald: '#34D399', rose: '#FB7185', amber: '#FBBF24', sky: '#38BDF8', violet: '#A78BFA' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { scrollbar-width: thin; scrollbar-color: #9C8E7E33 transparent; }
+    body { background: #0C0B0A; color: #E8E0D0; font-family: 'Inter', sans-serif; }
+    .card-glass {
+      background: rgba(24,22,18,0.85);
+      border: 1px solid rgba(232,224,208,0.10);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+    }
+    .card-glass:hover { border-color: rgba(232,224,208,0.18); }
+    .glow-emerald { box-shadow: 0 0 20px rgba(52,211,153,0.15); }
+    .glow-rose { box-shadow: 0 0 20px rgba(251,113,133,0.15); }
+    .glow-amber { box-shadow: 0 0 20px rgba(251,191,36,0.15); }
+    .glow-sky { box-shadow: 0 0 20px rgba(56,189,248,0.15); }
+    .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .scanner-line {
+      background: linear-gradient(90deg, transparent, rgba(52,211,153,0.3), transparent);
+      animation: scan 3s ease-in-out infinite;
+    }
+    @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    .typing-cursor::after { content: '|'; animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    input, textarea { caret-color: #34D399; }
+    .nav-item { transition: all 0.2s ease; }
+    .nav-item:hover { background: rgba(232,224,208,0.06); }
+    .nav-item.active { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); }
+    pre { font-family: 'JetBrains Mono', monospace; }
+    canvas { max-width: 100%; }
+  </style>
+</head>
+<body class="min-h-screen bg-bg overflow-hidden">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+    // ── API Client ──────────────────────────────────────────────────────────
+    const API = 'http://localhost:8888';
+    async function api(path, opts = {}) {
+      try {
+        const url = path.startsWith('http') ? path : `${API}${path}`;
+        const res = await fetch(url, {
+          headers: { 'Content-Type': 'application/json' },
+          ...opts,
+          body: opts.body ? JSON.stringify(opts.body) : undefined,
+        });
+        const json = await res.json();
+        return json.data ?? json;
+      } catch (e) {
+        console.error(`API error: ${path}`, e);
+        return null;
+      }
+    }
+
+    // ── Severity badges ─────────────────────────────────────────────────────
+    const SEVERITY = {
+      critical: { color: 'text-rose-400 bg-rose-400/10 border-rose-400/30', icon: '\u26A0' },
+      high:     { color: 'text-amber-400 bg-amber-400/10 border-amber-400/30', icon: '\u25B2' },
+      medium:   { color: 'text-sky-400 bg-sky-400/10 border-sky-400/30', icon: '\u25CF' },
+      low:      { color: 'text-ivory-muted bg-ivory/5 border-ivory/10', icon: '\u25CB' },
+    };
+
+    function SeverityBadge({ level }) {
+      const s = SEVERITY[level] || SEVERITY.low;
+      return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-mono border rounded-full ${s.color}`}>
+          {s.icon} {level}
+        </span>
+      );
+    }
+
+    // ── Format helpers ──────────────────────────────────────────────────────
+    function timeAgo(ts) {
+      if (!ts) return 'never';
+      const d = new Date(ts);
+      const s = Math.floor((Date.now() - d) / 1000);
+      if (s < 60) return `${s}s ago`;
+      if (s < 3600) return `${Math.floor(s/60)}m ago`;
+      if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+      return `${Math.floor(s/86400)}d ago`;
+    }
+
+    function eur(n) {
+      if (n == null) return '—';
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n);
+    }
+
+    function pct(n) {
+      if (n == null) return '—';
+      return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+    }
+
+    // ── Layout ──────────────────────────────────────────────────────────────
+    const VIEWS = [
+      { id: 'command',  label: 'Command Center', icon: '\u25C8', key: '1' },
+      { id: 'trading',  label: 'Trading Desk',   icon: '\u25A3', key: '2' },
+      { id: 'betting',  label: 'Betting Terminal',icon: '\u2660', key: '3' },
+      { id: 'engines',  label: 'Engine Status',   icon: '\u2699', key: '4' },
+    ];
+
+    function App() {
+      const [view, setView] = useState('command');
+      const [status, setStatus] = useState(null);
+      const [alerts, setAlerts] = useState([]);
+      const [connected, setConnected] = useState(false);
+
+      const refresh = useCallback(async () => {
+        const s = await api('/api/status');
+        if (s) {
+          // Normalize: API returns { engines: {name: status} }, frontend expects engine_status + engines_loaded
+          const eng = s.engines || s.engine_status || {};
+          const loaded = Object.keys(eng).length;
+          setStatus({ ...s, engine_status: eng, engines_loaded: loaded });
+          setConnected(true);
+        } else setConnected(false);
+
+        const a = await api('/api/sentinel/alerts');
+        if (Array.isArray(a)) setAlerts(a);
+        else if (a?.alerts) setAlerts(a.alerts);
+      }, []);
+
+      useEffect(() => {
+        refresh();
+        const id = setInterval(refresh, 30000);
+        return () => clearInterval(id);
+      }, [refresh]);
+
+      // Keyboard shortcuts
+      useEffect(() => {
+        const handler = (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+          const v = VIEWS.find(v => v.key === e.key);
+          if (v) setView(v.id);
+          if (e.key === 'r' && !e.metaKey && !e.ctrlKey) refresh();
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+      }, [refresh]);
+
+      return (
+        <div className="h-screen flex flex-col">
+          {/* Top Bar */}
+          <header className="flex items-center justify-between px-6 py-3 border-b border-ivory/10">
+            <div className="flex items-center gap-3">
+              <div className="font-mono font-bold text-lg tracking-tight">
+                <span className="text-accent-emerald">Q</span>
+                <span className="text-ivory">UADRATIC</span>
+                <span className="text-ivory-muted text-sm ml-2">TERMINAL</span>
+              </div>
+              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-accent-emerald pulse-dot' : 'bg-rose-400'}`} />
+              <span className="text-xs text-ivory-muted font-mono">
+                {connected ? 'CONNECTED' : 'OFFLINE'}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-ivory-muted font-mono">
+              <span>{alerts.length} alerts</span>
+              <span>{new Date().toLocaleTimeString()}</span>
+              <button onClick={refresh} className="px-2 py-1 rounded border border-ivory/10 hover:border-accent-emerald/30 hover:text-accent-emerald transition-colors">
+                REFRESH [R]
+              </button>
+            </div>
+          </header>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar */}
+            <nav className="w-56 border-r border-ivory/10 p-3 flex flex-col gap-1">
+              {VIEWS.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setView(v.id)}
+                  className={`nav-item w-full text-left px-3 py-2.5 rounded-lg border border-transparent font-mono text-sm flex items-center gap-3 ${
+                    view === v.id ? 'active text-accent-emerald' : 'text-ivory-muted hover:text-ivory'
+                  }`}
+                >
+                  <span className="text-base">{v.icon}</span>
+                  <span>{v.label}</span>
+                  <span className="ml-auto text-xs opacity-50">{v.key}</span>
+                </button>
+              ))}
+
+              <div className="mt-auto pt-4 border-t border-ivory/10 text-xs text-ivory-dim font-mono space-y-1 px-3">
+                <div>Engines: {status?.engines_loaded ?? '—'}</div>
+                <div>Uptime: {status?.uptime ?? '—'}</div>
+                <div className="text-ivory-muted/50 mt-2">v1.0.0 {'\u00B7'} localhost:8888</div>
+              </div>
+            </nav>
+
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto p-6">
+              {view === 'command'  && <CommandCenter alerts={alerts} status={status} connected={connected} refresh={refresh} />}
+              {view === 'trading'  && <TradingDesk status={status} />}
+              {view === 'betting'  && <BettingTerminal alerts={alerts} />}
+              {view === 'engines'  && <EngineStatus status={status} connected={connected} />}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VIEW 1: COMMAND CENTER
+    // ═══════════════════════════════════════════════════════════════════════════
+    function CommandCenter({ alerts, status, connected, refresh }) {
+      const [input, setInput] = useState('');
+      const [messages, setMessages] = useState([
+        { role: 'system', text: 'Quadratic Terminal online. All engines reporting.' },
+        { role: 'system', text: 'Type a command or ask a question. Examples:' },
+        { role: 'system', text: '  \u2022 "status" \u2014 Engine & scanner status' },
+        { role: 'system', text: '  \u2022 "alerts" \u2014 Recent Sentinel alerts' },
+        { role: 'system', text: '  \u2022 "forecast AAPL 10" \u2014 10-day price forecast' },
+        { role: 'system', text: '  \u2022 "news NVDA" \u2014 News headlines + FinBERT sentiment' },
+        { role: 'system', text: '  \u2022 "mood" \u2014 Cross-ticker market sentiment' },
+        { role: 'system', text: '  \u2022 "macro" \u2014 FRED economic indicators' },
+        { role: 'system', text: '  \u2022 "odds epl" \u2014 Live betting odds' },
+        { role: 'system', text: '  \u2022 "scores nba" \u2014 Live sports scores' },
+        { role: 'system', text: '  \u2022 "optimize AAPL,MSFT,GOOGL" \u2014 Portfolio optimization' },
+        { role: 'system', text: '  \u2022 "scan predictions" \u2014 Scan prediction markets' },
+      ]);
+      const [loading, setLoading] = useState(false);
+      const scrollRef = useRef(null);
+
+      useEffect(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, [messages]);
+
+      const addMsg = (role, text) => setMessages(m => [...m, { role, text, ts: new Date() }]);
+
+      const handleCommand = async () => {
+        if (!input.trim() || loading) return;
+        const cmd = input.trim();
+        setInput('');
+        addMsg('user', cmd);
+        setLoading(true);
+
+        try {
+          const parts = cmd.toLowerCase().split(/\s+/);
+          const verb = parts[0];
+
+          if (verb === 'status') {
+            const s = await api('/api/status');
+            const eng = s?.engines || s?.engine_status || {};
+            const loaded = Object.keys(eng).length;
+            addMsg('assistant', `\u2501\u2501 SYSTEM STATUS \u2501\u2501\nEngines loaded: ${loaded}\nUptime: ${s?.timestamp ? 'since ' + new Date(s.timestamp).toLocaleTimeString() : 'unknown'}\n\nEngine Status:\n${loaded > 0 ? Object.entries(eng).map(([k,v]) => `  ${v === 'available' ? '\u2705' : '\u274C'} ${k}: ${v}`).join('\n') : 'No data'}`);
+          }
+          else if (verb === 'alerts') {
+            const a = await api('/api/sentinel/alerts');
+            const list = Array.isArray(a) ? a : (a?.alerts ?? []);
+            if (list.length === 0) addMsg('assistant', 'No active alerts.');
+            else addMsg('assistant', `\u2501\u2501 ${list.length} ALERTS \u2501\u2501\n${list.slice(0, 10).map((al,i) => `${i+1}. [${(al.severity||'medium').toUpperCase()}] ${al.title}\n   ${al.summary}\n   ${al.edge_pct ? `Edge: ${al.edge_pct}%` : ''} ${al.stake_eur ? `Stake: ${eur(al.stake_eur)}` : ''}`).join('\n\n')}`);
+          }
+          else if (verb === 'forecast') {
+            const symbol = (parts[1] || 'AAPL').toUpperCase();
+            const horizon = parseInt(parts[2]) || 10;
+            addMsg('system', `Forecasting ${symbol} for ${horizon} steps...`);
+            const f = await api(`/api/forecast/${symbol}`, { method: 'POST', body: { start: '2024-01-01', horizon } });
+            if (f?.forecast) {
+              const fc = f.forecast;
+              addMsg('assistant', `\u2501\u2501 FORECAST: ${symbol} \u2501\u2501\nModel: ${f.model || 'EWMA'}\nHorizon: ${horizon} days\n\nMedian path: ${fc.median?.slice(-5).map(p => `$${p.toFixed(2)}`).join(' \u2192 ') ?? 'N/A'}\n\nLast price: $${fc.median?.[0]?.toFixed(2) ?? '?'}\nForecast end: $${fc.median?.[fc.median.length-1]?.toFixed(2) ?? '?'}\nChange: ${fc.median ? pct(((fc.median[fc.median.length-1] / fc.median[0]) - 1) * 100) : '?'}`);
+            } else {
+              addMsg('assistant', `Forecast returned: ${JSON.stringify(f).slice(0, 300)}`);
+            }
+          }
+          else if (verb === 'optimize') {
+            const tickers = (parts[1] || 'AAPL,MSFT,GOOGL').toUpperCase().split(',');
+            addMsg('system', `Optimizing portfolio: ${tickers.join(', ')}...`);
+            const r = await api('/api/portfolio/optimize', { method: 'POST', body: { tickers, start: '2023-01-01', method: 'CVaR', objective: 'MinRisk' } });
+            if (r?.weights) {
+              addMsg('assistant', `\u2501\u2501 PORTFOLIO OPTIMIZATION \u2501\u2501\nMethod: CVaR MinRisk\nTickers: ${tickers.join(', ')}\n\nOptimal Weights:\n${Object.entries(r.weights).map(([k,v]) => `  ${k}: ${(v*100).toFixed(1)}%`).join('\n')}\n\nExpected Return: ${r.expected_return ? pct(r.expected_return * 100) : '?'}\nRisk (CVaR): ${r.risk ? (r.risk * 100).toFixed(2) + '%' : '?'}\nSharpe Ratio: ${r.sharpe_ratio?.toFixed(3) ?? '?'}`);
+            } else {
+              addMsg('assistant', `Optimization returned: ${JSON.stringify(r).slice(0, 300)}`);
+            }
+          }
+          else if (verb === 'scores') {
+            const league = parts[1] || 'nba';
+            const s = await api(`/api/sports/scores/${league}`);
+            addMsg('assistant', `\u2501\u2501 ${league.toUpperCase()} SCORES \u2501\u2501\n${s ? JSON.stringify(s, null, 2).slice(0, 1000) : 'No data available'}`);
+          }
+          else if (verb === 'scan' && parts[1] === 'predictions') {
+            addMsg('system', 'Scanning prediction markets...');
+            const p = await api('/api/predictions/scan');
+            addMsg('assistant', `\u2501\u2501 PREDICTION MARKETS \u2501\u2501\n${p ? JSON.stringify(p, null, 2).slice(0, 1500) : 'No data'}`);
+          }
+          else if (verb === 'ohlcv') {
+            const symbol = (parts[1] || 'AAPL').toUpperCase();
+            addMsg('system', `Fetching OHLCV for ${symbol}...`);
+            const d = await api(`/api/market/ohlcv/${symbol}?start=2024-01-01`);
+            if (d?.close) {
+              const close = d.close;
+              addMsg('assistant', `\u2501\u2501 ${symbol} OHLCV \u2501\u2501\nData points: ${close.length}\nLatest close: $${close[close.length-1]?.toFixed(2)}\nRange: $${Math.min(...close).toFixed(2)} \u2013 $${Math.max(...close).toFixed(2)}`);
+            } else {
+              addMsg('assistant', JSON.stringify(d).slice(0, 500));
+            }
+          }
+          else if (verb === 'news' || verb === 'sentiment') {
+            const symbol = (parts[1] || 'AAPL').toUpperCase();
+            addMsg('system', `Fetching news & sentiment for ${symbol}...`);
+            const n = await api(`/api/news/sentiment/${symbol}`);
+            if (n?.articles?.length > 0) {
+              const summary = n.sentiment_summary || {};
+              addMsg('assistant', `\u2501\u2501 ${symbol} NEWS SENTIMENT \u2501\u2501\nOverall: ${(summary.overall || 'N/A').toUpperCase()} (index: ${summary.sentiment_index ?? '?'})\nArticles: ${n.count || n.articles.length}\n\n${n.articles.slice(0, 6).map(a =>
+                `[${a.sentiment?.label || '?'}] ${a.title}\n  ${a.source || ''} \u2022 ${a.sentiment?.score ? (a.sentiment.score * 100).toFixed(0) + '% confidence' : ''}`
+              ).join('\n\n')}\n\nBreakdown: ${summary.positive ?? 0} positive, ${summary.negative ?? 0} negative, ${summary.neutral ?? 0} neutral`);
+            } else {
+              addMsg('assistant', n?.error || 'No news available. Check NEWSAPI_KEY.');
+            }
+          }
+          else if (verb === 'mood') {
+            addMsg('system', 'Scanning market mood across major tickers...');
+            const m = await api('/api/news/market-mood');
+            if (m?.market_mood) {
+              const tickers = m.tickers || {};
+              addMsg('assistant', `\u2501\u2501 MARKET MOOD \u2501\u2501\nOverall: ${m.market_mood.toUpperCase()}\nSentiment Index: ${m.market_sentiment_index >= 0 ? '+' : ''}${m.market_sentiment_index}\n\nPer Ticker:\n${Object.entries(tickers).map(([sym, d]) =>
+                `  ${sym}: ${d.sentiment || '?'} (${d.index >= 0 ? '+' : ''}${d.index || 0}) [${d.articles_analyzed || 0} articles]`
+              ).join('\n')}`);
+            } else {
+              addMsg('assistant', 'Market mood unavailable.');
+            }
+          }
+          else if (verb === 'macro') {
+            addMsg('system', 'Fetching macro dashboard from FRED...');
+            const m = await api('/api/macro/dashboard');
+            if (m?.indicators) {
+              addMsg('assistant', `\u2501\u2501 MACRO DASHBOARD \u2501\u2501\n${Object.entries(m.indicators).map(([k, v]) =>
+                `  ${v.name || k}: ${v.value ?? v.latest ?? 'N/A'}${v.units ? ' ' + v.units : ''}`
+              ).join('\n')}`);
+            } else if (m) {
+              addMsg('assistant', JSON.stringify(m, null, 2).slice(0, 1000));
+            } else {
+              addMsg('assistant', 'Macro data unavailable. Check FRED_API_KEY.');
+            }
+          }
+          else if (verb === 'odds') {
+            const league = parts[1] || 'epl';
+            addMsg('system', `Fetching odds for ${league.toUpperCase()}...`);
+            const o = await api(`/api/sports/odds/${league}`);
+            if (o?.events?.length > 0) {
+              addMsg('assistant', `\u2501\u2501 ${league.toUpperCase()} ODDS \u2501\u2501\nEvents: ${o.count}\nAPI requests remaining: ${o.api_requests_remaining}\n\n${o.events.slice(0, 8).map(ev => {
+                const odds = ev.odds || {};
+                const oddsStr = Object.entries(odds).map(([name, info]) =>
+                  `${name}: ${info.price} (${info.bookmaker})`
+                ).join(' | ');
+                return `${ev.home} vs ${ev.away}\n  ${oddsStr}`;
+              }).join('\n\n')}`);
+            } else {
+              addMsg('assistant', o?.error || 'No odds available.');
+            }
+          }
+          else if (verb === 'help') {
+            addMsg('system', `Available commands:\n  status \u2014 System & engine status\n  alerts \u2014 Recent Sentinel alerts\n  forecast <SYM> [n] \u2014 Price forecast\n  optimize <T,T,...> \u2014 Portfolio optimization\n  news <SYM> \u2014 News & FinBERT sentiment\n  mood \u2014 Cross-ticker market mood\n  macro \u2014 FRED economic indicators\n  odds <league> \u2014 Live betting odds\n  scores <league> \u2014 Live sports scores\n  scan predictions \u2014 Prediction market scan\n  ohlcv <SYM> \u2014 OHLCV price data\n  help \u2014 This message\n\nLeagues: epl, laliga, seriea, bundesliga, nba, nfl, mlb\nKeyboard: 1-4 = switch views, R = refresh`);
+          }
+          else {
+            addMsg('system', `Unknown command: "${verb}". Type "help" for available commands.`);
+          }
+        } catch (e) {
+          addMsg('system', `Error: ${e.message}`);
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div className="h-full flex flex-col gap-4">
+          {/* Alert Banner */}
+          {alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length > 0 && (
+            <div className="card-glass glow-amber px-4 py-3 flex items-center gap-3">
+              <span className="text-amber-400 text-lg">{'\u26A0'}</span>
+              <span className="text-amber-400 font-mono text-sm">
+                {alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length} high-priority alerts active
+              </span>
+            </div>
+          )}
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'ENGINES', value: status?.engines_loaded ?? '—', color: 'text-accent-emerald' },
+              { label: 'ALERTS', value: alerts.length, color: alerts.length > 0 ? 'text-amber-400' : 'text-ivory-muted' },
+              { label: 'STATUS', value: connected ? 'ONLINE' : 'OFFLINE', color: connected ? 'text-accent-emerald' : 'text-rose-400' },
+              { label: 'API', value: 'localhost:8888', color: 'text-ivory-muted' },
+            ].map((s, i) => (
+              <div key={i} className="card-glass px-4 py-3">
+                <div className="text-xs text-ivory-dim font-mono mb-1">{s.label}</div>
+                <div className={`font-mono font-bold text-lg ${s.color}`}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Terminal */}
+          <div className="card-glass flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-ivory/10">
+              <div className="w-3 h-3 rounded-full bg-rose-400/60" />
+              <div className="w-3 h-3 rounded-full bg-amber-400/60" />
+              <div className="w-3 h-3 rounded-full bg-accent-emerald/60" />
+              <span className="ml-2 text-xs text-ivory-dim font-mono">quadratic-terminal</span>
+              {loading && <div className="ml-auto overflow-hidden w-32 h-0.5 rounded"><div className="scanner-line h-full" /></div>}
+            </div>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-sm">
+              {messages.map((m, i) => (
+                <div key={i} className={`${
+                  m.role === 'user' ? 'text-accent-emerald' :
+                  m.role === 'assistant' ? 'text-ivory' :
+                  'text-ivory-muted'
+                }`}>
+                  {m.role === 'user' && <span className="text-accent-emerald/60">{'\u276F'} </span>}
+                  {m.role === 'assistant' && <span className="text-sky-400/60">{'\u25C6'} </span>}
+                  {m.role === 'system' && <span className="text-ivory-dim">{'\u2502'} </span>}
+                  <span className="whitespace-pre-wrap">{m.text}</span>
+                </div>
+              ))}
+              {loading && <div className="text-ivory-muted typing-cursor">{'\u00A0'} Processing</div>}
+            </div>
+            <div className="border-t border-ivory/10 p-3 flex gap-2">
+              <span className="text-accent-emerald font-mono py-1">{'\u276F'}</span>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCommand()}
+                placeholder="Enter command..."
+                className="flex-1 bg-transparent text-ivory font-mono text-sm outline-none placeholder:text-ivory-dim"
+                autoFocus
+              />
+              <button
+                onClick={handleCommand}
+                disabled={loading}
+                className="px-3 py-1 text-xs font-mono border border-ivory/10 rounded hover:border-accent-emerald/30 hover:text-accent-emerald transition-colors disabled:opacity-30"
+              >
+                RUN
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VIEW 2: TRADING DESK
+    // ═══════════════════════════════════════════════════════════════════════════
+    function TradingDesk({ status }) {
+      const [tickers, setTickers] = useState('AAPL,MSFT,GOOGL,NVDA');
+      const [weights, setWeights] = useState(null);
+      const [forecast, setForecast] = useState(null);
+      const [forecastSymbol, setForecastSymbol] = useState('AAPL');
+      const [loading, setLoading] = useState({ optimize: false, forecast: false });
+      const chartRef = useRef(null);
+      const chartInstance = useRef(null);
+
+      const runOptimize = async () => {
+        setLoading(l => ({ ...l, optimize: true }));
+        const t = tickers.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        const r = await api('/api/portfolio/optimize', {
+          method: 'POST',
+          body: { tickers: t, start: '2023-01-01', method: 'CVaR', objective: 'MinRisk' }
+        });
+        if (r) setWeights(r);
+        setLoading(l => ({ ...l, optimize: false }));
+      };
+
+      const runForecast = async () => {
+        setLoading(l => ({ ...l, forecast: true }));
+        const r = await api(`/api/forecast/${forecastSymbol.toUpperCase()}`, {
+          method: 'POST',
+          body: { start: '2024-01-01', horizon: 20 }
+        });
+        if (r) setForecast(r);
+        setLoading(l => ({ ...l, forecast: false }));
+      };
+
+      // Draw forecast chart
+      useEffect(() => {
+        if (!forecast?.forecast?.median || !chartRef.current) return;
+        if (chartInstance.current) chartInstance.current.destroy();
+
+        const fc = forecast.forecast;
+        const labels = fc.median.map((_, i) => `D${i}`);
+
+        chartInstance.current = new Chart(chartRef.current, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Upper (90th pctl)',
+                data: fc.upper || fc.upper_95 || fc.upper_80 || fc.median.map(v => v * 1.05),
+                borderColor: 'rgba(52,211,153,0.2)',
+                backgroundColor: 'rgba(52,211,153,0.05)',
+                fill: '+1',
+                pointRadius: 0,
+                borderWidth: 1,
+              },
+              {
+                label: 'Median',
+                data: fc.median,
+                borderColor: '#34D399',
+                backgroundColor: 'transparent',
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+              {
+                label: 'Lower (10th pctl)',
+                data: fc.lower || fc.lower_95 || fc.lower_80 || fc.median.map(v => v * 0.95),
+                borderColor: 'rgba(52,211,153,0.2)',
+                backgroundColor: 'transparent',
+                fill: false,
+                pointRadius: 0,
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(24,22,18,0.95)',
+                titleColor: '#E8E0D0',
+                bodyColor: '#9C8E7E',
+                borderColor: 'rgba(232,224,208,0.1)',
+                borderWidth: 1,
+              },
+            },
+            scales: {
+              x: { grid: { color: 'rgba(232,224,208,0.05)' }, ticks: { color: '#6B5F52', font: { family: 'JetBrains Mono', size: 10 } } },
+              y: { grid: { color: 'rgba(232,224,208,0.05)' }, ticks: { color: '#6B5F52', font: { family: 'JetBrains Mono', size: 10 }, callback: v => `$${v.toFixed(0)}` } },
+            },
+          },
+        });
+      }, [forecast]);
+
+      // ── News & Sentiment ──
+      const [news, setNews] = useState(null);
+      const [watchlistData, setWatchlistData] = useState([]);
+      const WATCHLIST = ['NVDA','AAPL','TSLA','MSFT','GOOGL','AMZN','META'];
+
+      const loadNews = async (sym) => {
+        const n = await api(`/api/news/sentiment/${sym || forecastSymbol}`);
+        if (n) setNews(n);
+      };
+
+      const loadWatchlist = async () => {
+        const results = [];
+        for (const sym of WATCHLIST) {
+          const d = await api(`/api/market/ohlcv/${sym}?start=2024-01-01&interval=1d`);
+          if (d && !d.error) {
+            const closes = d.ohlcv?.closes || d.close || [];
+            const last = closes[closes.length - 1] || d.last_price || 0;
+            const prev = closes[closes.length - 2] || last;
+            const chg = prev ? ((last - prev) / prev) * 100 : 0;
+            results.push({ symbol: sym, price: last, change: chg, count: closes.length });
+          }
+        }
+        setWatchlistData(results);
+      };
+
+      useEffect(() => { loadWatchlist(); loadNews(forecastSymbol); }, []);
+
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-mono font-bold text-ivory flex items-center gap-2">
+            <span className="text-accent-emerald">{'\u25A3'}</span> Trading Desk
+          </h2>
+
+          {/* Watchlist Row */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {watchlistData.map(w => (
+              <div key={w.symbol}
+                onClick={() => { setForecastSymbol(w.symbol); loadNews(w.symbol); }}
+                className={`card-glass px-4 py-2 flex-shrink-0 cursor-pointer hover:border-accent-emerald/30 transition-colors ${
+                  forecastSymbol === w.symbol ? 'border-accent-emerald/40' : ''
+                }`}
+              >
+                <div className="font-mono text-sm font-bold text-ivory">{w.symbol}</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-ivory-muted">${w.price?.toFixed(2)}</span>
+                  <span className={`font-mono text-xs ${w.change >= 0 ? 'text-accent-emerald' : 'text-rose-400'}`}>
+                    {w.change >= 0 ? '+' : ''}{w.change?.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+            {watchlistData.length === 0 && (
+              <div className="text-ivory-dim text-sm font-mono py-2">Loading watchlist...</div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Portfolio Optimizer */}
+            <div className="card-glass p-5">
+              <h3 className="font-mono text-sm text-ivory-muted mb-3">PORTFOLIO OPTIMIZER</h3>
+              <div className="flex gap-2 mb-4">
+                <input
+                  value={tickers}
+                  onChange={e => setTickers(e.target.value)}
+                  className="flex-1 bg-bg/50 border border-ivory/10 rounded px-3 py-2 text-sm font-mono text-ivory outline-none focus:border-accent-emerald/30"
+                  placeholder="AAPL,MSFT,GOOGL"
+                />
+                <button
+                  onClick={runOptimize}
+                  disabled={loading.optimize}
+                  className="px-4 py-2 bg-accent-emerald/10 border border-accent-emerald/30 rounded text-accent-emerald text-sm font-mono hover:bg-accent-emerald/20 transition-colors disabled:opacity-30"
+                >
+                  {loading.optimize ? 'Running...' : 'OPTIMIZE'}
+                </button>
+              </div>
+
+              {weights && (
+                <div className="space-y-3">
+                  <div className="text-xs text-ivory-dim font-mono mb-2">CVaR MinRisk Allocation</div>
+                  {weights.weights && Object.entries(weights.weights).sort((a,b) => b[1]-a[1]).map(([k,v]) => (
+                    <div key={k} className="flex items-center gap-3">
+                      <span className="font-mono text-sm text-ivory w-12">{k}</span>
+                      <div className="flex-1 h-2 bg-ivory/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-accent-emerald/60 rounded-full" style={{ width: `${v*100}%` }} />
+                      </div>
+                      <span className="font-mono text-sm text-ivory-muted w-16 text-right">{(v*100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+                  <div className="mt-3 pt-3 border-t border-ivory/10 grid grid-cols-3 gap-3 text-xs font-mono">
+                    <div><span className="text-ivory-dim">Return</span><br/><span className="text-accent-emerald">{weights.expected_return ? pct(weights.expected_return * 100) : '\u2014'}</span></div>
+                    <div><span className="text-ivory-dim">Risk</span><br/><span className="text-rose-400">{weights.risk ? (weights.risk * 100).toFixed(2) + '%' : '\u2014'}</span></div>
+                    <div><span className="text-ivory-dim">Sharpe</span><br/><span className="text-sky-400">{weights.sharpe_ratio?.toFixed(3) ?? '\u2014'}</span></div>
+                  </div>
+                </div>
+              )}
+              {!weights && <div className="text-center text-ivory-dim text-sm py-8 font-mono">Enter tickers and run optimization</div>}
+            </div>
+
+            {/* Forecaster */}
+            <div className="card-glass p-5">
+              <h3 className="font-mono text-sm text-ivory-muted mb-3">PRICE FORECAST</h3>
+              <div className="flex gap-2 mb-4">
+                <input
+                  value={forecastSymbol}
+                  onChange={e => setForecastSymbol(e.target.value)}
+                  className="w-28 bg-bg/50 border border-ivory/10 rounded px-3 py-2 text-sm font-mono text-ivory outline-none focus:border-accent-emerald/30 uppercase"
+                  placeholder="AAPL"
+                />
+                <button
+                  onClick={runForecast}
+                  disabled={loading.forecast}
+                  className="px-4 py-2 bg-sky-400/10 border border-sky-400/30 rounded text-sky-400 text-sm font-mono hover:bg-sky-400/20 transition-colors disabled:opacity-30"
+                >
+                  {loading.forecast ? 'Running...' : 'FORECAST'}
+                </button>
+              </div>
+
+              <div className="h-52">
+                <canvas ref={chartRef} />
+                {!forecast && <div className="flex items-center justify-center h-full text-ivory-dim text-sm font-mono">Select a symbol and run forecast</div>}
+              </div>
+
+              {forecast?.forecast?.median && (
+                <div className="mt-3 pt-3 border-t border-ivory/10 grid grid-cols-4 gap-3 text-xs font-mono">
+                  <div><span className="text-ivory-dim">Model</span><br/><span className="text-ivory">{forecast.model || 'MC'}</span></div>
+                  <div><span className="text-ivory-dim">Start</span><br/><span className="text-ivory">${forecast.forecast.median[0]?.toFixed(2)}</span></div>
+                  <div>
+                    <span className="text-ivory-dim">End</span><br/>
+                    <span className={forecast.forecast.median[forecast.forecast.median.length-1] >= forecast.forecast.median[0] ? 'text-accent-emerald' : 'text-rose-400'}>
+                      ${forecast.forecast.median[forecast.forecast.median.length-1]?.toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-ivory-dim">{'\u0394'}</span><br/>
+                    <span className={forecast.forecast.median[forecast.forecast.median.length-1] >= forecast.forecast.median[0] ? 'text-accent-emerald' : 'text-rose-400'}>
+                      {pct(((forecast.forecast.median[forecast.forecast.median.length-1] / forecast.forecast.median[0]) - 1) * 100)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* News & Sentiment Row */}
+          <div className="card-glass p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-mono text-sm text-ivory-muted">
+                NEWS & SENTIMENT {news?.symbol ? `\u2014 ${news.symbol}` : ''}
+              </h3>
+              <div className="flex items-center gap-3">
+                {news?.sentiment_summary && (
+                  <span className={`text-xs font-mono px-2 py-1 rounded border ${
+                    news.sentiment_summary.overall === 'positive' ? 'text-accent-emerald border-accent-emerald/30 bg-accent-emerald/10' :
+                    news.sentiment_summary.overall === 'negative' ? 'text-rose-400 border-rose-400/30 bg-rose-400/10' :
+                    'text-ivory-muted border-ivory/10 bg-ivory/5'
+                  }`}>
+                    {news.sentiment_summary.overall?.toUpperCase()} ({news.sentiment_summary.sentiment_index >= 0 ? '+' : ''}{news.sentiment_summary.sentiment_index})
+                  </span>
+                )}
+                <button onClick={() => loadNews(forecastSymbol)} className="text-xs text-ivory-dim hover:text-ivory transition-colors font-mono">{'\u21BB'} REFRESH</button>
+              </div>
+            </div>
+
+            {news?.articles?.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                {news.articles.slice(0, 8).map((a, i) => (
+                  <div key={i} className="flex gap-3 p-2 rounded bg-bg/30 hover:bg-bg/50 transition-colors">
+                    <div className={`w-1 rounded-full flex-shrink-0 ${
+                      a.sentiment?.label === 'positive' ? 'bg-accent-emerald' :
+                      a.sentiment?.label === 'negative' ? 'bg-rose-400' : 'bg-ivory-dim'
+                    }`} />
+                    <div className="min-w-0">
+                      <div className="text-xs font-mono text-ivory truncate">{a.title}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-ivory-dim">{a.source}</span>
+                        <span className={`text-xs font-mono ${
+                          a.sentiment?.label === 'positive' ? 'text-accent-emerald' :
+                          a.sentiment?.label === 'negative' ? 'text-rose-400' : 'text-ivory-muted'
+                        }`}>
+                          {a.sentiment?.label} ({(a.sentiment?.score * 100)?.toFixed(0)}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-ivory-dim text-sm font-mono">
+                {news?.error || 'Click a ticker to load news & sentiment'}
+              </div>
+            )}
+
+            {news?.sentiment_summary && (
+              <div className="mt-3 pt-3 border-t border-ivory/10 flex gap-6 text-xs font-mono">
+                <span className="text-accent-emerald">{'\u25B2'} {news.sentiment_summary.positive} positive</span>
+                <span className="text-rose-400">{'\u25BC'} {news.sentiment_summary.negative} negative</span>
+                <span className="text-ivory-muted">{'\u25CF'} {news.sentiment_summary.neutral} neutral</span>
+                <span className="text-ivory-dim ml-auto">via {news.sentiment_summary.method}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VIEW 3: BETTING TERMINAL
+    // ═══════════════════════════════════════════════════════════════════════════
+    function BettingTerminal({ alerts }) {
+      const [valueBets, setValueBets] = useState([]);
+      const [arbAlerts, setArbAlerts] = useState([]);
+      const [scoresData, setScoresData] = useState(null);
+      const [selectedLeague, setSelectedLeague] = useState('epl');
+      const [loading, setLoading] = useState({});
+
+      const loadBets = async () => {
+        setLoading(l => ({ ...l, bets: true }));
+        const r = await api('/api/sentinel/alerts?type=value_bet');
+        const list = Array.isArray(r) ? r : (r?.alerts ?? []);
+        setValueBets(list);
+        setLoading(l => ({ ...l, bets: false }));
+      };
+
+      const loadArb = async () => {
+        setLoading(l => ({ ...l, arb: true }));
+        const r = await api('/api/sentinel/alerts?type=arbitrage');
+        const list = Array.isArray(r) ? r : (r?.alerts ?? []);
+        setArbAlerts(list);
+        setLoading(l => ({ ...l, arb: false }));
+      };
+
+      const loadScores = async (league) => {
+        setLoading(l => ({ ...l, scores: true }));
+        setSelectedLeague(league);
+        const s = await api(`/api/sports/scores/${league}`);
+        setScoresData(s);
+        setLoading(l => ({ ...l, scores: false }));
+      };
+
+      useEffect(() => { loadBets(); loadArb(); loadScores('epl'); }, []);
+
+      const LEAGUES = ['epl', 'laliga', 'seriea', 'bundesliga', 'champions-league', 'nba', 'nfl', 'mlb'];
+
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-mono font-bold text-ivory flex items-center gap-2">
+            <span className="text-accent-emerald">{'\u2660'}</span> Betting Terminal
+          </h2>
+
+          {/* League selector */}
+          <div className="flex gap-2 flex-wrap">
+            {LEAGUES.map(l => (
+              <button
+                key={l}
+                onClick={() => loadScores(l)}
+                className={`px-3 py-1.5 rounded text-xs font-mono border transition-colors ${
+                  selectedLeague === l
+                    ? 'border-accent-emerald/40 bg-accent-emerald/10 text-accent-emerald'
+                    : 'border-ivory/10 text-ivory-muted hover:border-ivory/20'
+                }`}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {/* Value Bets */}
+            <div className="card-glass p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-mono text-sm text-ivory-muted">VALUE BETS</h3>
+                <button onClick={loadBets} className="text-xs text-ivory-dim hover:text-ivory transition-colors">{loading.bets ? '...' : '\u21BB'}</button>
+              </div>
+              {valueBets.length === 0 ? (
+                <div className="text-center py-6 text-ivory-dim text-sm font-mono">No value bets detected.<br/>Scanner runs every 15 min on game days.</div>
+              ) : (
+                <div className="space-y-3">
+                  {valueBets.slice(0, 8).map((b, i) => (
+                    <div key={i} className="p-3 bg-bg/50 rounded-lg border border-ivory/5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-mono text-ivory">{b.title}</span>
+                        <SeverityBadge level={b.severity} />
+                      </div>
+                      <div className="text-xs text-ivory-muted font-mono">{b.summary}</div>
+                      {b.edge_pct && (
+                        <div className="mt-2 flex gap-3 text-xs font-mono">
+                          <span className="text-accent-emerald">Edge: {b.edge_pct}%</span>
+                          {b.stake_eur && <span className="text-amber-400">Stake: {eur(b.stake_eur)}</span>}
+                          {b.confidence && <span className="text-sky-400">Conf: {(b.confidence * 100).toFixed(0)}%</span>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Arbitrage */}
+            <div className="card-glass p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-mono text-sm text-ivory-muted">ARBITRAGE</h3>
+                <button onClick={loadArb} className="text-xs text-ivory-dim hover:text-ivory transition-colors">{loading.arb ? '...' : '\u21BB'}</button>
+              </div>
+              {arbAlerts.length === 0 ? (
+                <div className="text-center py-6 text-ivory-dim text-sm font-mono">No arbitrage detected.<br/>Scanner runs every 5 min.</div>
+              ) : (
+                <div className="space-y-3">
+                  {arbAlerts.slice(0, 8).map((a, i) => (
+                    <div key={i} className="p-3 bg-bg/50 rounded-lg border border-ivory/5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-mono text-ivory">{a.title}</span>
+                        <SeverityBadge level={a.severity} />
+                      </div>
+                      <div className="text-xs text-ivory-muted font-mono">{a.summary}</div>
+                      {a.edge_pct && (
+                        <div className="mt-2 text-xs font-mono text-accent-emerald">
+                          Margin: {a.edge_pct}% after fees
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Live Scores */}
+            <div className="card-glass p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-mono text-sm text-ivory-muted">{selectedLeague.toUpperCase()} SCORES</h3>
+                <button onClick={() => loadScores(selectedLeague)} className="text-xs text-ivory-dim hover:text-ivory transition-colors">{loading.scores ? '...' : '\u21BB'}</button>
+              </div>
+              {!scoresData || scoresData.error ? (
+                <div className="text-center py-6 text-ivory-dim text-sm font-mono">
+                  {scoresData?.error || 'Loading scores...'}
+                </div>
+              ) : scoresData.games?.length > 0 ? (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {scoresData.games.map((g, i) => {
+                    const parts = (g.score || '').split('-');
+                    const homeScore = parts[0] || '?';
+                    const awayScore = parts[1] || '?';
+                    const isLive = (g.status || '').toLowerCase().includes('in') || (g.clock && g.clock !== '0:00');
+                    return (
+                      <div key={i} className={`p-3 rounded-lg border ${isLive ? 'border-accent-emerald/20 bg-accent-emerald/5' : 'border-ivory/5 bg-bg/30'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm text-ivory font-medium">{g.home}</span>
+                              <span className="font-mono text-lg font-bold text-ivory">{homeScore}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="font-mono text-sm text-ivory-muted">{g.away}</span>
+                              <span className="font-mono text-lg font-bold text-ivory-muted">{awayScore}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-xs font-mono ${isLive ? 'text-accent-emerald' : 'text-ivory-dim'}`}>
+                              {isLive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent-emerald mr-1 pulse-dot" />}
+                              {g.status}
+                            </div>
+                            {g.clock && <div className="text-xs font-mono text-ivory-dim mt-0.5">{g.clock}</div>}
+                          </div>
+                        </div>
+                        {g.venue && <div className="text-xs text-ivory-dim mt-1 font-mono">{g.venue}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-ivory-dim text-sm font-mono">
+                  No games scheduled for {selectedLeague.toUpperCase()}
+                </div>
+              )}
+              {scoresData?.count != null && (
+                <div className="mt-2 pt-2 border-t border-ivory/10 text-xs text-ivory-dim font-mono">
+                  {scoresData.count} game{scoresData.count !== 1 ? 's' : ''} {scoresData.season ? `\u00B7 ${scoresData.season} season` : ''}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VIEW 4: ENGINE STATUS
+    // ═══════════════════════════════════════════════════════════════════════════
+    function EngineStatus({ status, connected }) {
+      const [sentinelStatus, setSentinelStatus] = useState(null);
+      const [configEdit, setConfigEdit] = useState(null);
+      const [saving, setSaving] = useState(false);
+
+      useEffect(() => {
+        api('/api/sentinel/status').then(s => { if (s) setSentinelStatus(s); });
+      }, []);
+
+      const saveConfig = async () => {
+        if (!configEdit) return;
+        setSaving(true);
+        const body = {};
+        if (configEdit.min_edge_pct) body.min_edge_pct = parseFloat(configEdit.min_edge_pct);
+        if (configEdit.max_kelly_pct) body.max_kelly_pct = parseFloat(configEdit.max_kelly_pct);
+        if (configEdit.bankroll_eur) body.bankroll_eur = parseFloat(configEdit.bankroll_eur);
+        await api('/api/sentinel/config', { method: 'POST', body });
+        setSaving(false);
+        setConfigEdit(null);
+        const s = await api('/api/sentinel/status');
+        if (s) setSentinelStatus(s);
+      };
+
+      const engines = status?.engine_status ? Object.entries(status.engine_status) : [];
+      const available = engines.filter(([,v]) => v === 'available').length;
+      const failed = engines.filter(([,v]) => v !== 'available').length;
+
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-mono font-bold text-ivory flex items-center gap-2">
+            <span className="text-accent-emerald">{'\u2699'}</span> Engine Status
+          </h2>
+
+          {/* Summary */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="card-glass p-4 glow-emerald">
+              <div className="text-xs text-ivory-dim font-mono">AVAILABLE</div>
+              <div className="text-2xl font-mono font-bold text-accent-emerald">{available}</div>
+            </div>
+            <div className={`card-glass p-4 ${failed > 0 ? 'glow-rose' : ''}`}>
+              <div className="text-xs text-ivory-dim font-mono">DEGRADED</div>
+              <div className={`text-2xl font-mono font-bold ${failed > 0 ? 'text-rose-400' : 'text-ivory-muted'}`}>{failed}</div>
+            </div>
+            <div className="card-glass p-4">
+              <div className="text-xs text-ivory-dim font-mono">API</div>
+              <div className={`text-2xl font-mono font-bold ${connected ? 'text-accent-emerald' : 'text-rose-400'}`}>{connected ? 'UP' : 'DOWN'}</div>
+            </div>
+            <div className="card-glass p-4">
+              <div className="text-xs text-ivory-dim font-mono">SENTINEL</div>
+              <div className={`text-2xl font-mono font-bold ${sentinelStatus ? 'text-accent-emerald' : 'text-ivory-muted'}`}>
+                {sentinelStatus?.running ? 'ACTIVE' : sentinelStatus ? 'IDLE' : '—'}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Engine List */}
+            <div className="card-glass p-4">
+              <h3 className="font-mono text-sm text-ivory-muted mb-3">ENGINE REGISTRY</h3>
+              <div className="space-y-1">
+                {engines.map(([name, st]) => (
+                  <div key={name} className="flex items-center justify-between py-2 px-3 rounded hover:bg-ivory/5 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${st === 'available' ? 'bg-accent-emerald' : 'bg-rose-400'}`} />
+                      <span className="font-mono text-sm text-ivory">{name}</span>
+                    </div>
+                    <span className={`text-xs font-mono ${st === 'available' ? 'text-accent-emerald' : 'text-rose-400'}`}>
+                      {st === 'available' ? 'OK' : st.slice(0, 40)}
+                    </span>
+                  </div>
+                ))}
+                {engines.length === 0 && <div className="text-center py-4 text-ivory-dim text-sm font-mono">No engine data. Start the API server.</div>}
+              </div>
+            </div>
+
+            {/* Sentinel Scanners + Config */}
+            <div className="card-glass p-4">
+              <h3 className="font-mono text-sm text-ivory-muted mb-3">SENTINEL SCANNERS</h3>
+              {sentinelStatus?.scanners ? (
+                <div className="space-y-2 mb-4">
+                  {Object.entries(sentinelStatus.scanners).map(([name, sc]) => (
+                    <div key={name} className="flex items-center justify-between py-2 px-3 rounded bg-bg/30">
+                      <span className="font-mono text-sm text-ivory">{name}</span>
+                      <div className="flex items-center gap-3 text-xs font-mono">
+                        <span className="text-ivory-muted">Last: {timeAgo(sc.last_run)}</span>
+                        <span className="text-ivory-dim">{sc.alerts_count ?? 0} alerts</span>
+                        <div className={`w-2 h-2 rounded-full ${sc.enabled !== false ? 'bg-accent-emerald' : 'bg-ivory-dim'}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-ivory-dim text-sm font-mono mb-4">
+                  Start the Sentinel daemon to see scanner status.
+                </div>
+              )}
+
+              <h3 className="font-mono text-sm text-ivory-muted mb-3 mt-4 pt-3 border-t border-ivory/10">SENTINEL CONFIG</h3>
+              {!configEdit ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm font-mono">
+                    <span className="text-ivory-muted">Bankroll</span>
+                    <span className="text-ivory">{eur(sentinelStatus?.config?.bankroll_eur ?? 5000)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-mono">
+                    <span className="text-ivory-muted">Min Edge</span>
+                    <span className="text-ivory">{sentinelStatus?.config?.min_edge_pct ?? 8}%</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-mono">
+                    <span className="text-ivory-muted">Max Kelly</span>
+                    <span className="text-ivory">{sentinelStatus?.config?.max_kelly_pct ?? 5}%</span>
+                  </div>
+                  <button
+                    onClick={() => setConfigEdit({
+                      bankroll_eur: String(sentinelStatus?.config?.bankroll_eur ?? 5000),
+                      min_edge_pct: String(sentinelStatus?.config?.min_edge_pct ?? 8),
+                      max_kelly_pct: String(sentinelStatus?.config?.max_kelly_pct ?? 5),
+                    })}
+                    className="mt-2 w-full py-2 text-xs font-mono border border-ivory/10 rounded hover:border-accent-emerald/30 hover:text-accent-emerald transition-colors"
+                  >
+                    EDIT CONFIG
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {['bankroll_eur', 'min_edge_pct', 'max_kelly_pct'].map(field => (
+                    <div key={field} className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-ivory-muted w-24">{field}</span>
+                      <input
+                        value={configEdit[field]}
+                        onChange={e => setConfigEdit(c => ({ ...c, [field]: e.target.value }))}
+                        className="flex-1 bg-bg/50 border border-ivory/10 rounded px-2 py-1 text-sm font-mono text-ivory outline-none focus:border-accent-emerald/30"
+                      />
+                    </div>
+                  ))}
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={saveConfig} disabled={saving} className="flex-1 py-2 text-xs font-mono bg-accent-emerald/10 border border-accent-emerald/30 rounded text-accent-emerald hover:bg-accent-emerald/20 disabled:opacity-30">
+                      {saving ? 'SAVING...' : 'SAVE'}
+                    </button>
+                    <button onClick={() => setConfigEdit(null)} className="flex-1 py-2 text-xs font-mono border border-ivory/10 rounded text-ivory-muted hover:border-ivory/20">
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Mount ────────────────────────────────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

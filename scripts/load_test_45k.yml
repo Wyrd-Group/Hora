@@ -1,0 +1,41 @@
+config:
+  target: "http://localhost:8000"
+  engines:
+    ws: {}
+  phases:
+    # Phase 1: Warm up the system (0 to 100 VUs/sec over 30 seconds)
+    - duration: 30
+      arrivalRate: 10
+      rampTo: 100
+      name: "Warm up phase"
+    # Phase 2: Massive Spike to 45,000 Connections
+    # We ramp up to 750 new users per second for 60 seconds (750 * 60 = 45,000)
+    - duration: 60
+      arrivalRate: 100
+      rampTo: 750
+      name: "Ramp to 45k Users"
+  # OS Network Bypass (Disable connection pooling limits in Node)
+  http:
+    pool: 65000
+
+scenarios:
+  # Scenario A: HTTP health probe (separate from WS — 'get' is not a valid ws engine action)
+  - name: "HTTP Health Probe"
+    weight: 1
+    engine: http
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+
+  # Scenario B: Stateful WebSocket subscription — holds connections open 60s each
+  # At 750 new WS connections/sec × 60s hold = ~45,000 concurrent connections
+  - name: "WebSocket Subscription"
+    weight: 9
+    engine: ws
+    flow:
+      # Establish stateful WebSocket connection for real-time telemetry
+      - connect: "ws://localhost:8000/ws/events"
+      # Hold the connection open for 60 seconds to stack concurrent connections
+      - think: 60

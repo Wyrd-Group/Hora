@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Referrer-Policy: don't leak path info to outbound domains -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Content Security Policy. 'unsafe-inline' on style kept for Tailwind JIT + inline <style>. 'unsafe-eval' required by deck.gl shader compilation. connect-src whitelists Supabase / Stripe / Sentry / AI providers / map-tile hosts. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; connect-src 'self' https: wss:; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="theme-color" content="#060a12" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#060a12" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AEGIS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="AEGIS Empire" />
+    <meta name="msapplication-TileColor" content="#060a12" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="format-detection" content="telephone=no, address=no, email=no, date=no" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
+    <title>AEGIS — EMPIRE</title>
+    <meta name="description" content="AEGIS Empire — Build your financial empire. Trade, manage agents, and master the markets in this gamified finance simulator." />
+    <meta property="og:title" content="AEGIS Empire" />
+    <meta property="og:description" content="Build your financial empire. Trade, manage agents, and master the markets." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AEGIS Empire" />
+    <meta name="twitter:description" content="Build your financial empire. Trade, manage agents, and master the markets." />
+    <meta property="og:url" content="https://aegis-empire.netlify.app/" />
+    <meta name="twitter:image" content="https://aegis-empire.netlify.app/og-preview.png" />
+    <link rel="canonical" href="https://aegis-empire.netlify.app/" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+    <link rel="mask-icon" href="/favicon.png" color="#060a12" />
+    <link rel="manifest" href="/manifest.json" />
+    <!-- Onboarding ritual fonts: Cormorant Garamond italic for serif accents,
+         alongside the Inter / JetBrains Mono families that drive the rest
+         of the UI. Preconnect for faster first paint of the ritual surface. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap" />
+    <style>
+      /* Safe area insets for notched devices */
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+      /* Prevent overscroll bounce on iOS */
+      html, body { overscroll-behavior: none; height: 100%; }
+      body {
+        /* Dark chrome behind anything that might peek */
+        background: #060a12;
+        color: #E8E0D0;
+        /* Kill the iOS text-selection / tap highlight game feel artifacts */
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        /* Kill the iOS momentum scroll for root-level panels; inner scroll areas re-enable. */
+        overscroll-behavior: none;
+        /* Let viewport-fit=cover show through at the notch */
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      /* Allow text selection in input fields */
+      input, textarea, [contenteditable="true"] {
+        -webkit-user-select: text; user-select: text;
+      }
+      /* Minimum touch target (iOS HIG = 44px, Material = 48px). Applies to
+         any control that would otherwise be too small to tap reliably on a
+         phone. Use .touch-target when you want the minimum without a visible
+         background. */
+      @media (pointer: coarse) {
+        button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
+          min-height: 44px;
+          min-width: 44px;
+        }
+        /* Escape hatch: mark small visual-only controls with data-nogrow */
+        [data-nogrow], [data-nogrow] * { min-height: 0 !important; min-width: 0 !important; }
+      }
+      .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      /* Reduce motion respect */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+      /* Pre-mount splash to avoid a white flash in PWA / native wrapper */
+      #root:empty::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: #060a12 radial-gradient(circle at 50% 40%, rgba(0,229,255,0.08), transparent 60%);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Service worker registration — only on secure contexts and in production.
+      // Unregisters any stale dev SW on localhost to avoid stale-cache headaches.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+          if (isLocalhost) {
+            // Clean up any leftover SW from a previous prod build served on this host.
+            navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+            return;
+          }
+          navigator.serviceWorker
+            .register('/service-worker.js', { scope: '/' })
+            .then((reg) => {
+              // When a new SW is installed, prompt the next page load to take over.
+              reg.addEventListener('updatefound', () => {
+                const nw = reg.installing;
+                if (!nw) return;
+                nw.addEventListener('statechange', () => {
+                  if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                    // A new version is available — activate it on next navigation.
+                    nw.postMessage('SKIP_WAITING');
+                  }
+                });
+              });
+            })
+            .catch(() => { /* SW is a progressive enhancement; never block the app */ });
+        });
+      }
+    </script>
+  </body>
+</html>

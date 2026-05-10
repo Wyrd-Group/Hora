@@ -1,0 +1,18 @@
+[
+  {
+    "alert_type": "value_bet",
+    "severity": "medium",
+    "title": "TEST ALERT: Sentinel is operational",
+    "summary": "This is a test alert from the Sentinel daemon.",
+    "details": {
+      "test": true,
+      "timestamp": "2026-04-03T15:51:18.751693"
+    },
+    "recommendation": "No action needed. This is just a test.",
+    "stake_eur": 100,
+    "edge_pct": 12.5,
+    "confidence": 0.85,
+    "timestamp": "2026-04-03T15:51:18.751940",
+    "acknowledged": false
+  }
+]

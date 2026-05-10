@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# Netlify build plugins — auto-installed at deploy time, no need to track
+.netlify/
+
+# Tauri build output — generated on each desktop build
+src-tauri/target/
+src-tauri/gen/
+
+# Scratchpad for PDF generation experiments — not source
+tmp-pdf/

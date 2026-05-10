@@ -1,0 +1,16 @@
+[build]
+  base = "apps/empire"
+  command = "npm run build"
+  publish = "apps/empire/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  directory = "apps/empire/netlify/functions"
+
+# SPA fallback — must come AFTER function routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

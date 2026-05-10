@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aegis Empire — Open-Source Stack & Build Plan</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e293b;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; line-height: 1.7; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 2rem; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin: 2rem 0 1rem; letter-spacing: 0.05em; }
+  h2 { font-size: 1.5rem; color: #e2e8f0; margin: 2rem 0 0.75rem; border-left: 4px solid var(--accent2); padding-left: 1rem; }
+  h3 { font-size: 1.15rem; color: var(--accent); margin: 1.5rem 0 0.5rem; }
+  p, li { font-size: 0.95rem; color: var(--muted); }
+  a { color: var(--accent); }
+  strong { color: var(--text); }
+  code { background: var(--surface2); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 1rem 0; }
+  pre code { background: none; padding: 0; color: var(--text); }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.4rem; }
+
+  .header-block { text-align: center; padding: 3rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%); margin-bottom: 2rem; }
+  .header-block h1 { border: none; font-size: 2.5rem; margin: 0; letter-spacing: 0.1em; }
+  .header-block .sub { color: var(--muted); font-size: 1rem; margin-top: 0.5rem; }
+  .header-block .date { color: var(--accent2); font-size: 0.85rem; margin-top: 0.25rem; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-size: 0.88rem; }
+  th { background: var(--surface2); color: var(--accent); text-align: left; padding: 0.6rem 0.8rem; border: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
+  td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+  tr:hover td { background: rgba(0, 229, 255, 0.03); }
+
+  .tag { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .tag-mit { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+  .tag-apache { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+  .tag-bsd { background: rgba(124, 58, 237, 0.15); color: var(--accent2); }
+  .tag-essential { background: rgba(0, 229, 255, 0.15); color: var(--accent); }
+  .tag-recommended { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+  .tag-optional { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin: 1rem 0; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .card h3 { margin-top: 0; }
+
+  .arch-diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent); white-space: pre; overflow-x: auto; line-height: 1.5; }
+
+  .phase { border-left: 3px solid var(--accent2); padding-left: 1.5rem; margin: 1.5rem 0; }
+  .phase-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+  .phase-num { background: var(--accent2); color: white; width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+  .phase-title { font-size: 1.2rem; color: var(--text); font-weight: 600; }
+  .phase-time { color: var(--accent); font-size: 0.85rem; }
+
+  .warning { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+  .warning strong { color: var(--red); }
+
+  .callout { background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+  .callout strong { color: var(--accent); }
+
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    table { font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header-block">
+  <h1>AEGIS EMPIRE — OPEN-SOURCE STACK & BUILD PLAN</h1>
+  <div class="sub">Geospatial Corporate Domination Simulator × Quadratic IP Integration</div>
+  <div class="date">Quadratic Group — April 2, 2026 — CONFIDENTIAL</div>
+</div>
+
+<!-- ============================================================ -->
+<h1>PART 0: WHAT YOU ALREADY HAVE (AND WHAT YOU DON'T)</h1>
+<!-- ============================================================ -->
+
+<div class="callout">
+  <strong>Honest Assessment:</strong> You have 19 quantitative engines (24K LOC), a FlowCore agent framework, a FastAPI backend, a Glass admin app (Vite/React/Tailwind), and Supabase. What you <em>don't</em> have is: a geospatial map renderer, real-time multiplayer sync, the Aegis UI layer, the card/pack system frontend, or an AI Director. This plan fills those gaps with open-source tools that plug directly into your existing architecture — no rewrites.
+</div>
+
+<h2>Your Existing Stack (Confirmed)</h2>
+<table>
+  <tr><th>Component</th><th>What You Have</th><th>Location</th></tr>
+  <tr><td>Frontend App</td><td>Glass — Vite + React + Tailwind</td><td><code>/apps/glass/</code></td></tr>
+  <tr><td>API</td><td>FastAPI (Python, async)</td><td><code>/services/api/</code></td></tr>
+  <tr><td>Agent Framework</td><td>FlowCore (TypeScript, DAG workflows)</td><td><code>/packages/flowcore/</code></td></tr>
+  <tr><td>Quant Engines</td><td>19 engines (Heston, HMM, VaR, NLP, etc.)</td><td><code>/quadratic-ip/</code></td></tr>
+  <tr><td>Shared Types</td><td>TypeScript type defs</td><td><code>/packages/shared-types/</code></td></tr>
+  <tr><td>Data Pipeline</td><td>Ingestor service</td><td><code>/services/ingestor/</code></td></tr>
+  <tr><td>Backend DB</td><td>Supabase (Postgres + Realtime)</td><td>Cloud</td></tr>
+  <tr><td>Tile Server</td><td>Tileserver (exists, needs wiring)</td><td><code>/services/tileserver/</code></td></tr>
+</table>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 1: THE COMPLETE OPEN-SOURCE STACK</h1>
+<!-- ============================================================ -->
+
+<p>Every library below is battle-tested, permissively licensed (MIT/Apache/BSD), and selected specifically because it fills a gap your existing codebase doesn't cover. Organized by the spec requirement it satisfies.</p>
+
+<!-- ===== LAYER 1: MAP ===== -->
+<h2>Layer 1: The Aegis Geoscape (World Map)</h2>
+<p>The primary view. Must feel like a Palantir Gotham/DEFCON command terminal — dark, vector, tactical. No cartoon 3D.</p>
+
+<table>
+  <tr>
+    <th>Library</th><th>License</th><th>Priority</th><th>What It Does For Aegis</th><th>Why This One</th>
+  </tr>
+  <tr>
+    <td><strong><a href="https://maplibre.org/">MapLibre GL JS</a></strong></td>
+    <td><span class="tag tag-bsd">BSD-3</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Dark vector basemap. WebGL-rendered world map with custom styles, zoom, pan, 3D terrain. The <em>canvas</em> your entire game lives on.</td>
+    <td>Fully open-source fork of Mapbox GL (Mapbox went proprietary Dec 2020). Governed by Linux Foundation. No API key, no vendor lock. Your existing <code>/services/tileserver/</code> can serve tiles directly to it.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://visgl.github.io/react-maplibre/">react-maplibre</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>React hooks/context bindings for MapLibre. Integrates map into your Glass app's Vite/React architecture.</td>
+    <td>Official vis.gl React wrapper. Idiomatic React — no imperative map manipulation.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://deck.gl/">Deck.gl</a></strong></td>
+    <td><span class="tag tag-apache">Apache 2.0</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>Glowing data nodes</strong> (ScatterplotLayer + additive blending), <strong>trade route arcs</strong> (ArcLayer), <strong>heatmap overlays</strong> (HeatmapLayer), <strong>hex aggregation</strong> (H3HexagonLayer) for "Consumer Sentiment" / "Regulatory Heat" map layers.</td>
+    <td>Uber's WebGL data viz library. Renders millions of animated points at 60fps. Overlays natively on MapLibre. This single library handles: red/green corporate nodes, sea/rail/air trade lines, conflict zone heatmaps, ICBM trajectory arcs, and the "weather map" data layers from the spec.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://protomaps.com/">Protomaps PMTiles</a></strong></td>
+    <td><span class="tag tag-bsd">BSD-3</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td>Self-hosted vector tiles in a single static file. No Mapbox dependency, no tile server costs. Serve from CDN via HTTP range requests.</td>
+    <td>Pairs with your existing tileserver. Download planet extract or region clip. Serve dark basemap tiles at zero cost. Eliminates any commercial map dependency.</td>
+  </tr>
+  <tr>
+    <td><strong>CARTO Dark Matter</strong> tileset</td>
+    <td><span class="tag tag-mit">CC-BY 3.0</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td>Pre-built dark basemap style. Instant Gotham/tactical aesthetic without custom cartography.</td>
+    <td>Industry-standard dark data viz basemap. Drop-in style JSON for MapLibre.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://globe.gl/">Globe.gl</a></strong> + Three.js</td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-optional">OPTIONAL v2</span></td>
+    <td>3D globe for endgame "Emperor" view. Animated arcs (missile trajectories, satellite grids), orbital visualization (Telecom Satellites, Space Launchpads).</td>
+    <td>Built on Three.js (you already use Three.js). <code>react-globe.gl</code> wrapper available. Reserve for v2 "zoomed-out" view — flat map first.</td>
+  </tr>
+</table>
+
+<div class="callout">
+  <strong>Architecture Decision:</strong> MapLibre = basemap canvas. Deck.gl = ALL data layers on top (nodes, arcs, heatmaps). They compose natively — Deck.gl renders as a MapLibre overlay. Your tileserver serves PMTiles. The browser does zero math — it just renders what the backend tells it to.
+</div>
+
+<!-- ===== LAYER 2: DATA VIZ ===== -->
+<h2>Layer 2: Data Visualization (Graphs, Flows, Charts)</h2>
+<p>Beyond the map — the terminal panels, network graphs, financial charts, and the "Double Irish" routing puzzle.</p>
+
+<table>
+  <tr><th>Library</th><th>License</th><th>Priority</th><th>Spec Feature It Powers</th><th>Why</th></tr>
+  <tr>
+    <td><strong><a href="https://reactflow.dev/">React Flow</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>"Double Irish" Capital Flow Routing Puzzle</strong> — draggable nodes for shell companies, tax havens, onshore ops. Players draw capital flow routes between them. Also: corporate ownership diagrams, supply chain topology.</td>
+    <td>Purpose-built for React. Nodes are React components (infinite customization). Drag, connect, zoom, validate connections. Perfect for the spatial tax evasion mechanic and Multi-Vector Trade Routing.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://www.sigmajs.org/">Sigma.js</a></strong> + graphology</td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td><strong>Analysis Mode & Espionage</strong> — rendering thousands of rival AI infrastructure nodes when "Analysis View" is toggled. Large-scale corporate network visualization.</td>
+    <td>WebGL-powered. Handles 50K+ nodes at 60fps. graphology library provides graph algorithms (shortest path, centrality — useful for routing puzzles).</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://echarts.apache.org/">Apache ECharts</a></strong></td>
+    <td><span class="tag tag-apache">Apache 2.0</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Financial charts in the Data Intel Feed terminal: candlesticks, waterfall (P&L), treemaps (sector allocation), radar (4-axis progression), gauges (Heat meter, DEFCON level).</td>
+    <td>Most complete charting library. Dark theme built-in. 40+ chart types. Handles real-time streaming data. Used by Alibaba at scale. Better than Recharts for this density of chart types.</td>
+  </tr>
+  <tr>
+    <td><strong>D3.js</strong></td>
+    <td><span class="tag tag-bsd">BSD-3</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td>Custom one-off visualizations: DEFCON warfare panel animations, M&A Cyber-Strike overlay, scrolling neon tickers, force-directed follower network.</td>
+    <td>Maximum flexibility for bespoke viz. Use sparingly — only for things ECharts/React Flow can't handle.</td>
+  </tr>
+</table>
+
+<!-- ===== LAYER 3: UI ===== -->
+<h2>Layer 3: The Aegis UI Shell (Terminal, Panels, Cards)</h2>
+<p>The Data Intel Feed, sliding terminal, EA FC-style project matrices, card system, command interface.</p>
+
+<table>
+  <tr><th>Library</th><th>License</th><th>Priority</th><th>Spec Feature</th><th>Why</th></tr>
+  <tr>
+    <td><strong><a href="https://ui.shadcn.com/">shadcn/ui</a></strong> + Radix</td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Base component system for everything: buttons, modals, dropdowns, tabs, dialogs, tooltips. The "Aegis design system."</td>
+    <td>You already use Tailwind. shadcn copies source into your repo (no npm dependency). Full dark mode. Accessible. You own the code — customize ruthlessly for the tactical aesthetic.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://cmdk.paco.me/">cmdk</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>The Master Terminal / Data Intel Feed</strong> — command palette for all corporate operations. Player types commands, browses departments, triggers scans. Like the Spotlight/Raycast of the game.</td>
+    <td>Powers Linear and Raycast. Unstyled (you apply Aegis dark theme). shadcn has a pre-integrated <code>&lt;Command&gt;</code> component. Fast, keyboard-first.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://github.com/react-grid-layout/react-grid-layout">react-grid-layout</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Draggable, resizable dashboard panels for the Data Intel Feed window. Player can rearrange: department terminal, financial charts, Heat gauge, follower ticker, news feed.</td>
+    <td>No jQuery. Responsive breakpoints. Used by Grafana dashboards. Players customize their command layout.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://www.tremor.so/">Tremor</a></strong></td>
+    <td><span class="tag tag-apache">Apache 2.0</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td>Pre-built KPI cards, metric displays, sparklines for the corporate dashboard. Net worth tracker, axis progression bars, income summaries.</td>
+    <td>Built on Tailwind. "Show data, hide chrome" philosophy matches the Aegis minimalism. Pre-styled dark components.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://www.framer.com/motion/">Framer Motion</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Sliding terminal animations, panel transitions, node pulse effects, ICBM trajectory render, M&A Cyber-Strike overlay entrance/exit, "Maven activation" UI transformation.</td>
+    <td>Declarative React animations. Layout animations. GPU-accelerated. Makes the difference between "functional dashboard" and "premium tactical interface."</td>
+  </tr>
+</table>
+
+<!-- ===== LAYER 4: GAME SERVER ===== -->
+<h2>Layer 4: Game Server & Multiplayer</h2>
+<p>Server-authoritative architecture. Browser = dumb terminal. All economy math, RNG, and game logic runs server-side.</p>
+
+<table>
+  <tr><th>Library</th><th>License</th><th>Priority</th><th>Spec Feature</th><th>Why</th></tr>
+  <tr>
+    <td><strong><a href="https://colyseus.io/">Colyseus</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>Real-time multiplayer sync</strong> — Syndicate Holding Companies, live PvP Hostile Takeovers, M&A Cyber-Strikes. Room-based architecture = one room per "game world" or "syndicate battle."</td>
+    <td>Node.js. Automatic binary delta state sync (only sends changes). Server-authoritative by design. Matchmaking built-in. Horizontal scaling. Perfect thin-client model — browser receives state snapshots, renders them, sends actions back.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://docs.celeryq.dev/">Celery</a></strong> + Redis broker</td>
+    <td><span class="tag tag-bsd">BSD-3</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>Construction timers</strong> (Build vs. Buy mechanic), <strong>quarterly economic ticks</strong>, <strong>AI Director event generation</strong>, <strong>gacha pack pulls</strong>, <strong>board vote scheduling</strong>, <strong>Heat decay</strong> (−1/day), salary/tax calculations.</td>
+    <td>You already use FastAPI (Python). Celery is the standard Python task queue. Celery Beat for cron scheduling (quarterly votes, monthly tax cycles). Workers process heavy computation without blocking API.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://temporal.io/">Temporal.io</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td><strong>Long-running M&A battles</strong> (multi-day proxy wars), <strong>IPO process</strong> (multi-step), <strong>Board Proxy Wars</strong> (quarterly cycles lasting weeks), <strong>Regulatory Crackdowns</strong> (multi-phase antitrust events).</td>
+    <td>Durable workflows that survive server restarts. An M&A battle can span days with multiple player inputs — Temporal tracks state across the entire saga. Overkill for simple timers (use Celery), essential for complex multi-step game events.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://valkey.io/">Valkey</a></strong></td>
+    <td><span class="tag tag-bsd">BSD</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Real-time state cache (wallet balances, corporation status), pub/sub for event broadcasts (crime busts, market crashes), leaderboard sorted sets, session management.</td>
+    <td>Open-source Redis fork (Linux Foundation). Drop-in Redis replacement. Sub-millisecond reads. Your Celery broker runs on this too. One dependency, multiple uses.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://bitecs.dev/">bitECS</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td>Entity Component System for managing all game entities server-side: corporate nodes, AI rival corporations, trade routes, departments, employees/manager cards, venues.</td>
+    <td>Data-oriented design. Extremely fast iteration over thousands of entities. Composable systems (TaxSystem, CrimeSystem, IncomeSystem run independently). Natural fit for the 12 venues × 5 levels × 6 departments × N players entity space.</td>
+  </tr>
+</table>
+
+<div class="warning">
+  <strong>Architecture Note:</strong> Colyseus (Node.js) handles real-time multiplayer sync. FastAPI (Python) handles REST endpoints + webhook actions. They communicate via Valkey pub/sub. This is intentional — Colyseus is best-in-class for WebSocket state sync, FastAPI is your existing backend with all your Python engines. Don't collapse them into one.
+</div>
+
+<!-- ===== LAYER 5: AI ===== -->
+<h2>Layer 5: AI Director & Agent Systems</h2>
+<p>Procedural event generation, rival AI corporations, the Maven premium feature, and Sentinel integration.</p>
+
+<table>
+  <tr><th>Library</th><th>License</th><th>Priority</th><th>Spec Feature</th><th>Why</th></tr>
+  <tr>
+    <td><strong><a href="https://langchain-ai.github.io/langgraph/">LangGraph</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>AI Director</strong> — the brain that procedurally generates market events, spawns geopolitical conflicts, triggers Regulatory Crackdowns, manages rival AI corp behavior. Also powers <strong>Project Maven</strong> (autonomous recommendations, route optimization, storm prediction).</td>
+    <td>State machine + graph execution model. Define nodes: <code>analyze_market()</code>, <code>generate_events()</code>, <code>rival_decisions()</code>, <code>maven_recommendations()</code>. Conditional edges branch based on game state. Persistent state across ticks. Integrates with your FlowCore framework.</td>
+  </tr>
+  <tr>
+    <td><strong>Your FlowCore</strong></td>
+    <td>Proprietary</td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td><strong>Sentinel Agent Memos</strong> — when players spend Q-Coins to deploy a "Sentinel Agent", FlowCore + agentChainEngine.js generates the 3-page institutional Investment Memo inside the Aegis UI.</td>
+    <td>You already built this. agentChainEngine.js is production-ready. Wire it: player action → FastAPI endpoint → FlowCore workflow → memo generated → Supabase Realtime pushes to browser.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://simpy.readthedocs.io/">SimPy</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td><strong>Economic simulation engine</strong> — discrete event simulation for supply/demand equilibrium, market price discovery, resource production rates across industrial sectors.</td>
+    <td>Process-based simulation. Model: Oil rig produces X barrels/tick, factory consumes Y resources, market adjusts prices. Run in Celery worker every economic tick. Feed results to your quantEngine.js for Heston-based price paths.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://github.com/jakejack13/gachapy">GachaPy</a></strong></td>
+    <td><span class="tag tag-mit">MIT</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td><strong>Pack/Card System</strong> — probability tables for Manager Cards, Specialist Employees, Security Contract Cards. Pity system, rarity tiers (Bronze/Silver/Gold/Diamond), drop rates.</td>
+    <td>Simple Python gacha library with customizable probability tables. Run in Celery worker (server-side RNG — client never sees the math). Your spec requires tiered cards slotted into infrastructure nodes — GachaPy handles the pull logic.</td>
+  </tr>
+</table>
+
+<!-- ===== LAYER 6: DATA ===== -->
+<h2>Layer 6: Data Infrastructure</h2>
+
+<table>
+  <tr><th>Tool</th><th>License</th><th>Priority</th><th>Purpose</th></tr>
+  <tr>
+    <td><strong>Supabase</strong> (existing)</td>
+    <td><span class="tag tag-apache">Apache 2.0</span></td>
+    <td><span class="tag tag-essential">ESSENTIAL</span></td>
+    <td>Primary database (Postgres) + Realtime subscriptions (push state changes to browser via WebSocket). Your existing infra — keep it.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://github.com/timescale/timescaledb">TimescaleDB</a></strong></td>
+    <td><span class="tag tag-apache">Apache 2.0</span></td>
+    <td><span class="tag tag-recommended">RECOMMENDED</span></td>
+    <td>Time-series extension for Supabase Postgres. Store market price ticks, economic history, player action logs. 95% compression on historical data. Continuous aggregates for dashboards.</td>
+  </tr>
+  <tr>
+    <td><strong><a href="https://www.redpanda.com/">RedPanda</a></strong></td>
+    <td><span class="tag tag-bsd">BSL → Apache</span></td>
+    <td><span class="tag tag-optional">OPTIONAL v2</span></td>
+    <td>Event streaming for RLHF data pipeline. Every player action → immutable event log → multiple consumers (analytics, AI training, audit). Kafka-compatible but 10x lower latency, single binary (no Zookeeper). Add when you need the "Zero-Knowledge Architecture" data pipeline.</td>
+  </tr>
+  <tr>
+    <td><strong>NATS</strong></td>
+    <td><span class="tag tag-apache">Apache 2.0</span></td>
+    <td><span class="tag tag-optional">OPTIONAL v2</span></td>
+    <td>Lightweight real-time pub/sub for ephemeral game events (rival declared war, market crash alert). Sub-millisecond. Alternative to Valkey pub/sub if you need topic-based routing at scale.</td>
+  </tr>
+</table>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 2: HOW OPEN-SOURCE MAPS TO YOUR 19 ENGINES</h1>
+<!-- ============================================================ -->
+
+<p>This is the critical integration matrix — which of your proprietary engines connect to which open-source tools, and through what mechanism.</p>
+
+<table>
+  <tr><th>Your Engine</th><th>Open-Source Tool</th><th>Integration Point</th></tr>
+  <tr>
+    <td><code>quantEngine.js</code> (Heston, HMM)</td>
+    <td>SimPy + Celery</td>
+    <td>SimPy runs economic tick → feeds parameters to quantEngine → generates price paths → stored in TimescaleDB → Supabase pushes to browser → ECharts renders candlesticks</td>
+  </tr>
+  <tr>
+    <td><code>riskEngine.js</code> (VaR, stress)</td>
+    <td>LangGraph (Maven AI)</td>
+    <td>Maven's "autonomous advantage" uses riskEngine to calculate portfolio VaR → warns player of impending storms before they happen. Triggered by AI Director tick.</td>
+  </tr>
+  <tr>
+    <td><code>macroEngine.js</code></td>
+    <td>LangGraph + Deck.gl</td>
+    <td>AI Director uses macroEngine to generate Geopolitical Conflict events → LangGraph decides severity → Deck.gl renders conflict zones (red heatmaps) on Geoscape</td>
+  </tr>
+  <tr>
+    <td><code>behavioralEngine.js</code></td>
+    <td>Supabase + Themis pipeline</td>
+    <td>Runs server-side on every player trade → bias severity scores → stored as observations → feeds Themis data products. Hidden RLHF loop.</td>
+  </tr>
+  <tr>
+    <td><code>nlpEngine.js</code></td>
+    <td>LangGraph (AI Director)</td>
+    <td>Processes simulated "news events" generated by AI Director → extracts entities → feeds Aegis geopolitical risk overlay → triggers News Bulletin in Trading Simulator</td>
+  </tr>
+  <tr>
+    <td><code>agentChainEngine.js</code></td>
+    <td>FlowCore + FastAPI</td>
+    <td>Player spends Q-Coins → triggers Sentinel Agent → FlowCore orchestrates agentChainEngine → 3-page Investment Memo rendered in Aegis UI panel</td>
+  </tr>
+  <tr>
+    <td><code>signalEngine.js</code></td>
+    <td>ECharts + Deck.gl</td>
+    <td>Technical indicators feed into "Information Asymmetry Scans" — player scans map for undervalued nodes. Signal data rendered as chart overlays in the terminal.</td>
+  </tr>
+  <tr>
+    <td><code>factorEngine.js</code></td>
+    <td>ECharts (radar charts)</td>
+    <td>Factor decomposition of player portfolio → rendered as radar chart in the Data Intel Feed → shows sector exposure vs. market</td>
+  </tr>
+  <tr>
+    <td><code>microstructureEngine.js</code></td>
+    <td>Colyseus</td>
+    <td>PvP hostile takeover M&A battles use order-book-style mechanics. microstructureEngine calculates capital impact. Colyseus syncs battle state in real-time.</td>
+  </tr>
+  <tr>
+    <td><code>markovEngine.js</code></td>
+    <td>LangGraph + SimPy</td>
+    <td>HMM regime detection feeds AI Director. Market regime shifts trigger different event generation paths. SimPy models regime-dependent production rates.</td>
+  </tr>
+  <tr>
+    <td><code>adaptiveProfiler.js</code></td>
+    <td>Supabase Realtime</td>
+    <td>Updates in real-time as player makes decisions. Profile feeds into Maven AI's personalized recommendations. Stored in player state on Supabase.</td>
+  </tr>
+  <tr>
+    <td><code>sharedIntelligence.js</code></td>
+    <td>All — central orchestrator</td>
+    <td>Context-aware parameter mapping (game mode vs. training mode vs. real market). Routes data between engines. Unchanged — already works.</td>
+  </tr>
+</table>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 3: SYSTEM ARCHITECTURE</h1>
+<!-- ============================================================ -->
+
+<div class="arch-diagram">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BROWSER (Dumb Terminal — Zero Math)                                         │
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │ MapLibre GL   │  │ Deck.gl      │  │ React Flow   │  │ ECharts       │  │
+│  │ (basemap)     │  │ (nodes/arcs) │  │ (tax routing)│  │ (fin charts)  │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘  │
+│         └──────────────────┴────────────────┼────────────────────┘          │
+│                        ┌───────────────────┘                                │
+│  ┌─────────────────────┴──────────────────────────────────────────────┐    │
+│  │ AEGIS UI SHELL (shadcn/ui + cmdk + react-grid-layout + Framer)    │    │
+│  │ ┌────────────┐ ┌──────────────┐ ┌─────────────┐ ┌──────────────┐ │    │
+│  │ │ Data Intel  │ │ Dept Terminal│ │ Marketplace │ │ DEFCON Panel │ │    │
+│  │ │ Feed (cmdk) │ │ (EA FC cards)│ │ (node list) │ │ (warfare)    │ │    │
+│  │ └────────────┘ └──────────────┘ └─────────────┘ └──────────────┘ │    │
+│  └──────────────────────────────────────────────────────────────────┘     │
+│                              │                                             │
+│                    fetch() + WebSocket                                      │
+└──────────────────────────────┼─────────────────────────────────────────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                ▼
+┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐
+│ FastAPI           │  │ Colyseus     │  │ Supabase         │
+│ (REST + webhooks) │  │ (WebSocket   │  │ (Realtime sub)   │
+│ Python            │  │  multiplayer)│  │ Postgres + WS    │
+│                   │  │ Node.js      │  │                  │
+└────────┬──────────┘  └──────┬───────┘  └────────┬─────────┘
+         │                    │                    │
+         ├────────────────────┼────────────────────┤
+         ▼                    ▼                    ▼
+┌──────────────────────────────────────────────────────────────┐
+│ VALKEY (Redis-compatible)                                     │
+│ Cache + Pub/Sub + Leaderboards + Session + Celery Broker     │
+└──────────────────────────────────┬───────────────────────────┘
+                                   │
+         ┌─────────────────────────┼──────────────────────┐
+         ▼                         ▼                      ▼
+┌──────────────────┐  ┌─────────────────────┐  ┌──────────────────┐
+│ CELERY WORKERS   │  │ AI DIRECTOR         │  │ GAME ENGINE      │
+│                  │  │ (LangGraph)         │  │ (bitECS)         │
+│ • Construction   │  │                     │  │                  │
+│   timers         │  │ • Event generation  │  │ • Entity mgmt    │
+│ • Quarterly      │  │ • Rival AI behavior │  │ • Income calc    │
+│   economic ticks │  │ • Conflict spawning │  │ • Tax system     │
+│ • Gacha pulls    │  │ • Maven AI          │  │ • Crime/Heat     │
+│ • Tax cycles     │  │                     │  │ • Venue upgrades │
+│ • Heat decay     │  │ Uses:               │  │ • Dept projects  │
+│                  │  │ • macroEngine.js    │  │                  │
+│ Uses:            │  │ • nlpEngine.js      │  │ Uses:            │
+│ • GachaPy        │  │ • markovEngine.js   │  │ • All 19 engines │
+│ • SimPy          │  │ • riskEngine.js     │  │   via shared     │
+│ • quantEngine    │  │ • FlowCore          │  │   Intelligence   │
+└──────────────────┘  └─────────────────────┘  └──────────────────┘
+         │                         │                      │
+         └─────────────────────────┼──────────────────────┘
+                                   ▼
+                    ┌──────────────────────────┐
+                    │ POSTGRESQL (Supabase)     │
+                    │ + TimescaleDB extension   │
+                    │                          │
+                    │ • Player state            │
+                    │ • Corporation data        │
+                    │ • Market price history    │
+                    │ • Card inventories        │
+                    │ • Observation pipeline    │
+                    │   (Themis RLHF data)     │
+                    └──────────────────────────┘
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 4: THE BUILD PLAN (PHASED)</h1>
+<!-- ============================================================ -->
+
+<div class="warning">
+  <strong>Scope reality check:</strong> This is a massive spec. You're one person with a May 4 internship deadline and €20K bootstrap. The plan below is phased so that Phase 1 produces a playable, impressive demo that showcases the vision — enough for your closed beta in October 2026 and investor conversations. Later phases add multiplayer, Maven AI, and the premium endgame mechanics.
+</div>
+
+<!-- PHASE 1 -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">1</div>
+    <div>
+      <div class="phase-title">Aegis Geoscape + Core Economy (Single Player)</div>
+      <div class="phase-time">8–10 weeks · Build FIRST</div>
+    </div>
+  </div>
+
+  <h3>Goal: Replace the 3D city builder with the Aegis tactical map. Sole Trader → LLC progression, venues as map nodes, departments from terminal.</h3>
+
+  <table>
+    <tr><th>Task</th><th>Tools</th><th>Effort</th><th>Output</th></tr>
+    <tr>
+      <td>Set up MapLibre + Deck.gl in Glass app</td>
+      <td>MapLibre GL JS, react-maplibre, Deck.gl, Protomaps/CARTO Dark</td>
+      <td>3–4 days</td>
+      <td>Dark tactical world map renders in browser. Pan, zoom, 3D terrain. Aegis aesthetic achieved.</td>
+    </tr>
+    <tr>
+      <td>Render corporate nodes on map</td>
+      <td>Deck.gl ScatterplotLayer (additive blending for glow)</td>
+      <td>2–3 days</td>
+      <td>Green dots = owned venues/depts. Red dots = available market. Clicking opens Aegis-styled property card.</td>
+    </tr>
+    <tr>
+      <td>Build the Data Intel Feed terminal</td>
+      <td>cmdk, shadcn/ui, react-grid-layout, Framer Motion</td>
+      <td>5–7 days</td>
+      <td>Sliding sidebar with sub-tabs: Overview, Departments, Marketplace, Finance, Crime. All operations through here — no scattered UI buttons.</td>
+    </tr>
+    <tr>
+      <td>Wire existing Economy v2 to Aegis UI</td>
+      <td>FastAPI endpoints, Supabase Realtime</td>
+      <td>5–7 days</td>
+      <td>Dual-wallet display, 4-axis progression bars, corporate structure selection, tax system — all existing logic, new UI skin.</td>
+    </tr>
+    <tr>
+      <td>EA FC-style Department Project Cards</td>
+      <td>shadcn/ui Card components, Framer Motion</td>
+      <td>3–4 days</td>
+      <td>18+ department projects as visual cards with cost, focus sessions, success rate RNG, mathematical effect. Like FIFA Ultimate Team menus.</td>
+    </tr>
+    <tr>
+      <td>Venue purchase flow (Maze Bank style)</td>
+      <td>Deck.gl + shadcn/ui modal</td>
+      <td>3–4 days</td>
+      <td>Click red dot → Palantir-styled listing (CAPEX, OPEX, structural benefits) → Build vs. Buy choice → node turns green.</td>
+    </tr>
+    <tr>
+      <td>Financial charts in terminal</td>
+      <td>Apache ECharts (dark theme)</td>
+      <td>3–4 days</td>
+      <td>Net worth over time, income waterfall, axis radar chart, Heat gauge.</td>
+    </tr>
+    <tr>
+      <td>Move game math server-side</td>
+      <td>FastAPI + Celery + Valkey</td>
+      <td>7–10 days</td>
+      <td>All RNG, income calc, tax calc runs on backend. Browser only displays results. Thin-client architecture achieved.</td>
+    </tr>
+  </table>
+
+  <div class="callout">
+    <strong>Phase 1 deliverable:</strong> A single-player Aegis Geoscape where you manage a corporate empire from Sole Trader to LLC, buy venue nodes on a dark tactical map, run department projects from a terminal interface, and see financial data in real-time. This alone is demo-worthy for investors.
+  </div>
+</div>
+
+<!-- PHASE 2 -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">2</div>
+    <div>
+      <div class="phase-title">Card/Pack System + AI Director + Crime</div>
+      <div class="phase-time">6–8 weeks</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Task</th><th>Tools</th><th>Effort</th><th>Output</th></tr>
+    <tr>
+      <td>Card/Pack gacha system</td>
+      <td>GachaPy (server), shadcn/ui (card UI), Framer Motion (pack opening animation)</td>
+      <td>5–7 days</td>
+      <td>Players open packs → pull Manager/Employee/Security cards → slot into nodes. Tiered rarity. Pity system. FUT-style roster management.</td>
+    </tr>
+    <tr>
+      <td>AI Director (procedural events)</td>
+      <td>LangGraph + Celery Beat + macroEngine.js + markovEngine.js</td>
+      <td>7–10 days</td>
+      <td>Every 6-hour tick: market regime check → event generation → new red dots spawned → conflicts/opportunities appear on map. Living, breathing world.</td>
+    </tr>
+    <tr>
+      <td>White-collar crime system UI</td>
+      <td>shadcn/ui + ECharts (Heat gauge) + Deck.gl (ICBM arcs for visual)</td>
+      <td>4–5 days</td>
+      <td>DEFCON Warfare Panel. Execute crimes from terminal. Heat tracker. Detection roll server-side. Visual ICBM trajectory on map when crime executes.</td>
+    </tr>
+    <tr>
+      <td>Banking system + tax routing</td>
+      <td>React Flow (capital flow diagram) + FastAPI</td>
+      <td>5–7 days</td>
+      <td>"Double Irish" routing puzzle. Connect shell nodes → draw capital flow route → see effective tax rate change in real-time. Geographic tax evasion mechanic.</td>
+    </tr>
+    <tr>
+      <td>Global Macro Data Layers</td>
+      <td>Deck.gl HeatmapLayer + H3HexagonLayer</td>
+      <td>3–4 days</td>
+      <td>Toggle overlays: Regulatory Heatmap, Consumer Sentiment, Flow Toxicity. Globe recolors. Guides expansion strategy.</td>
+    </tr>
+    <tr>
+      <td>Multi-Vector Trade Routes</td>
+      <td>Deck.gl ArcLayer (Sea/Rail/Air/Truck as different colors/patterns)</td>
+      <td>3–4 days</td>
+      <td>Routes ONLY visible when Logistics tab open in Data Intel Feed. Toggle off → clean map. Spec-compliant minimalism.</td>
+    </tr>
+  </table>
+</div>
+
+<!-- PHASE 3 -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">3</div>
+    <div>
+      <div class="phase-title">Multiplayer + PvP + Public Company</div>
+      <div class="phase-time">8–12 weeks</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Task</th><th>Tools</th><th>Effort</th></tr>
+    <tr>
+      <td>Colyseus multiplayer server</td>
+      <td>Colyseus + Valkey pub/sub bridge to FastAPI</td>
+      <td>10–14 days</td>
+    </tr>
+    <tr>
+      <td>Syndicate Holding Companies (clans)</td>
+      <td>Colyseus rooms + Supabase</td>
+      <td>5–7 days</td>
+    </tr>
+    <tr>
+      <td>Hostile Takeover M&A Cyber-Strike</td>
+      <td>Colyseus (real-time sync) + Temporal (multi-phase battle) + microstructureEngine.js</td>
+      <td>7–10 days</td>
+    </tr>
+    <tr>
+      <td>Public Company + Board Proxy Wars</td>
+      <td>Temporal workflows (quarterly cycles) + LangGraph (Board AI behavior)</td>
+      <td>5–7 days</td>
+    </tr>
+    <tr>
+      <td>Analysis Mode & Espionage</td>
+      <td>Sigma.js (rival node rendering) + Deck.gl overlay toggle</td>
+      <td>4–5 days</td>
+    </tr>
+    <tr>
+      <td>Antitrust Regulatory Crackdowns (PvE raid boss)</td>
+      <td>LangGraph (AI Director escalation) + Temporal (multi-phase crackdown)</td>
+      <td>5–7 days</td>
+    </tr>
+    <tr>
+      <td>Geopolitical conflicts on map</td>
+      <td>Deck.gl (conflict zone rendering, missile trajectories) + macroEngine.js + nlpEngine.js</td>
+      <td>5–7 days</td>
+    </tr>
+  </table>
+</div>
+
+<!-- PHASE 4 -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">4</div>
+    <div>
+      <div class="phase-title">Premium Endgame: Maven AI + Sentinel Integration + RLHF Pipeline</div>
+      <div class="phase-time">6–10 weeks</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Task</th><th>Tools</th><th>Effort</th></tr>
+    <tr>
+      <td>Project Maven AI activation</td>
+      <td>LangGraph + riskEngine + macroEngine + adaptiveProfiler</td>
+      <td>7–10 days</td>
+    </tr>
+    <tr>
+      <td>Sentinel Agent memos (in-game)</td>
+      <td>FlowCore + agentChainEngine.js + FastAPI</td>
+      <td>5–7 days</td>
+    </tr>
+    <tr>
+      <td>Expanded endgame sectors (Deepwater Rigs, Satellite Grids, Launchpads)</td>
+      <td>Deck.gl IconLayer (custom sector icons) + Globe.gl (3D orbital view)</td>
+      <td>5–7 days</td>
+    </tr>
+    <tr>
+      <td>RLHF data pipeline (Zero-Knowledge Architecture)</td>
+      <td>RedPanda event streaming + behavioralEngine + Themis collector/warehouse</td>
+      <td>7–10 days</td>
+    </tr>
+    <tr>
+      <td>ESG Weaponization + Greenwashing mechanic</td>
+      <td>AI Director + Marketing dept cards + Deck.gl (ESG overlay layer)</td>
+      <td>3–5 days</td>
+    </tr>
+  </table>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 5: COMPLETE DEPENDENCY LIST</h1>
+<!-- ============================================================ -->
+
+<h2>NPM Packages (Frontend — Glass App)</h2>
+<pre><code># Essential (Phase 1)
+npm install maplibre-gl @vis.gl/react-maplibre
+npm install @deck.gl/core @deck.gl/layers @deck.gl/mapbox @deck.gl/react
+npm install @radix-ui/react-dialog @radix-ui/react-popover  # shadcn deps
+npm install cmdk
+npm install react-grid-layout
+npm install framer-motion
+npm install echarts echarts-for-react
+npm install pmtiles               # Protomaps tile loader
+
+# Phase 2
+npm install @xyflow/react          # React Flow (capital routing)
+
+# Phase 3
+npm install colyseus.js            # Colyseus browser client
+npm install @react-sigma/core graphology  # Sigma.js for Analysis Mode
+
+# Phase 4 (optional)
+npm install react-globe.gl three   # 3D globe endgame view</code></pre>
+
+<h2>Python Packages (Backend — FastAPI)</h2>
+<pre><code># Essential (Phase 1)
+pip install celery[redis] redis    # Task queue
+pip install valkey                 # Valkey client
+
+# Phase 2
+pip install simpy                  # Economic simulation
+pip install gachapy                # Gacha/pack system
+pip install langgraph langchain-core  # AI Director
+
+# Phase 3
+pip install temporalio             # Durable workflows
+
+# Phase 4
+pip install redpanda-connect       # Event streaming (if needed)</code></pre>
+
+<h2>Infrastructure (Docker/Self-Hosted)</h2>
+<pre><code># docker-compose additions to your existing setup
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports: ["6379:6379"]
+
+  colyseus:
+    build: ./services/colyseus
+    ports: ["2567:2567"]
+    depends_on: [valkey]
+
+  celery-worker:
+    build: ./services/api
+    command: celery -A worker worker --loglevel=info
+    depends_on: [valkey]
+
+  celery-beat:
+    build: ./services/api
+    command: celery -A worker beat --loglevel=info
+    depends_on: [valkey]
+
+  # Phase 3 (optional)
+  temporal:
+    image: temporalio/auto-setup:latest
+    ports: ["7233:7233"]</code></pre>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 6: HARD TRUTHS & RISK ASSESSMENT</h1>
+<!-- ============================================================ -->
+
+<div class="card">
+  <h3>What will actually be hard</h3>
+  <ol>
+    <li><strong>Colyseus ↔ FastAPI bridge:</strong> Two different runtimes (Node.js + Python) talking via Valkey pub/sub. This is architecturally sound but operationally complex. Expect 2 weeks just on the integration layer in Phase 3.</li>
+    <li><strong>Deck.gl custom shaders for "glow" effect:</strong> The additive blending trick works, but getting the exact Palantir/DEFCON aesthetic requires custom WebGL shader work. Budget time for visual polish — it's what sells the game to investors.</li>
+    <li><strong>AI Director quality:</strong> LangGraph gives you the orchestration. But the quality of procedural events depends on prompt engineering and game design. Garbage in, garbage out. This is a game design problem more than a tech problem.</li>
+    <li><strong>Scale of the spec vs. your timeline:</strong> The full spec is 2-3 engineer-years of work. Phase 1 alone is an impressive product. Don't let scope creep kill you before the October beta. Ship Phase 1, get users, then iterate.</li>
+    <li><strong>Temporal operational overhead:</strong> Running a Temporal cluster adds infrastructure complexity. For the first pass, you can model M&A battles as Celery task chains. Move to Temporal only when you need multi-day durable workflows.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3>What you should NOT build</h3>
+  <ol>
+    <li><strong>Don't build your own map renderer.</strong> MapLibre + Deck.gl gives you everything. Custom Canvas/WebGL map rendering would take months and be worse.</li>
+    <li><strong>Don't build your own multiplayer sync.</strong> Colyseus handles binary delta state sync, reconnection, room management. You'd spend 3 months reimplementing what it does in 3 days.</li>
+    <li><strong>Don't build your own charting library.</strong> ECharts has 40+ chart types with dark theme. D3 for custom one-offs only.</li>
+    <li><strong>Don't use Kafka.</strong> RedPanda if you need event streaming. Kafka's JVM + Zookeeper overhead is absurd for a pre-revenue game.</li>
+    <li><strong>Don't try to make CesiumJS work for the main view.</strong> 3D globe is heavier, harder to customize, and slower to iterate on. Flat tactical map first. Globe.gl for endgame "Emperor mode" only.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3>What gives you the biggest bang for the buck</h3>
+  <ol>
+    <li><strong>MapLibre + Deck.gl + CARTO Dark:</strong> Instantly transforms the game from "student project with 3D cubes" to "holy shit is this Palantir?" The aesthetic is 80% of the pitch.</li>
+    <li><strong>cmdk + shadcn/ui terminal:</strong> The Data Intel Feed is the game. It's how players interact with everything. Nail this and the game feels like a real command interface.</li>
+    <li><strong>Your existing 19 engines:</strong> Already built, already tested. The open-source stack just gives them a delivery mechanism. Your engines are the moat. Everything else is plumbing.</li>
+  </ol>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<h1>PART 7: QUICK REFERENCE — EVERY OPEN-SOURCE TOOL AT A GLANCE</h1>
+<!-- ============================================================ -->
+
+<table>
+  <tr>
+    <th>Tool</th><th>License</th><th>Category</th><th>One-Line Purpose</th><th>Phase</th>
+  </tr>
+  <tr><td>MapLibre GL JS</td><td>BSD-3</td><td>Map</td><td>Dark vector world map basemap</td><td>1</td></tr>
+  <tr><td>react-maplibre</td><td>MIT</td><td>Map</td><td>React bindings for MapLibre</td><td>1</td></tr>
+  <tr><td>Deck.gl</td><td>Apache 2.0</td><td>Map/Viz</td><td>Glowing nodes, arc routes, heatmap overlays</td><td>1</td></tr>
+  <tr><td>Protomaps PMTiles</td><td>BSD-3</td><td>Map</td><td>Self-hosted vector tiles (no Mapbox)</td><td>1</td></tr>
+  <tr><td>CARTO Dark Matter</td><td>CC-BY 3.0</td><td>Map</td><td>Dark basemap tileset style</td><td>1</td></tr>
+  <tr><td>shadcn/ui + Radix</td><td>MIT</td><td>UI</td><td>Component system (buttons, modals, tabs)</td><td>1</td></tr>
+  <tr><td>cmdk</td><td>MIT</td><td>UI</td><td>Command palette / Master Terminal</td><td>1</td></tr>
+  <tr><td>react-grid-layout</td><td>MIT</td><td>UI</td><td>Draggable dashboard panels</td><td>1</td></tr>
+  <tr><td>Framer Motion</td><td>MIT</td><td>UI</td><td>Animations (sliding panels, pulses, arcs)</td><td>1</td></tr>
+  <tr><td>Apache ECharts</td><td>Apache 2.0</td><td>Charts</td><td>Financial charts, gauges, radar</td><td>1</td></tr>
+  <tr><td>Tremor</td><td>Apache 2.0</td><td>UI</td><td>KPI cards, metric displays</td><td>1</td></tr>
+  <tr><td>Celery + Beat</td><td>BSD-3</td><td>Backend</td><td>Task queue (timers, ticks, scheduled jobs)</td><td>1</td></tr>
+  <tr><td>Valkey</td><td>BSD</td><td>Backend</td><td>Cache, pub/sub, leaderboards, broker</td><td>1</td></tr>
+  <tr><td>React Flow</td><td>MIT</td><td>Viz</td><td>Capital flow routing / tax puzzle</td><td>2</td></tr>
+  <tr><td>GachaPy</td><td>MIT</td><td>Game</td><td>Card pack probability / gacha pulls</td><td>2</td></tr>
+  <tr><td>LangGraph</td><td>MIT</td><td>AI</td><td>AI Director + Maven AI orchestration</td><td>2</td></tr>
+  <tr><td>SimPy</td><td>MIT</td><td>Game</td><td>Economic discrete event simulation</td><td>2</td></tr>
+  <tr><td>Colyseus</td><td>MIT</td><td>Multiplayer</td><td>Real-time multiplayer server + sync</td><td>3</td></tr>
+  <tr><td>bitECS</td><td>MIT</td><td>Game</td><td>Entity Component System for game entities</td><td>3</td></tr>
+  <tr><td>Sigma.js</td><td>MIT</td><td>Viz</td><td>Large-scale rival network rendering</td><td>3</td></tr>
+  <tr><td>Temporal.io</td><td>MIT</td><td>Backend</td><td>Durable workflows (M&A, board wars)</td><td>3</td></tr>
+  <tr><td>Globe.gl</td><td>MIT</td><td>Map</td><td>3D globe for endgame Emperor view</td><td>4</td></tr>
+  <tr><td>RedPanda</td><td>BSL</td><td>Data</td><td>Event streaming (RLHF pipeline)</td><td>4</td></tr>
+  <tr><td>TimescaleDB</td><td>Apache 2.0</td><td>Data</td><td>Time-series for market price history</td><td>2</td></tr>
+  <tr><td>D3.js</td><td>BSD-3</td><td>Viz</td><td>Custom bespoke visualizations only</td><td>2+</td></tr>
+</table>
+
+<p style="text-align: center; margin-top: 3rem; color: var(--muted); font-size: 0.85rem;">
+  Total licensing cost: <strong style="color: var(--green);">€0</strong> · Total vendor lock-in risk: <strong style="color: var(--green);">Zero</strong> · All permissive licenses (MIT/Apache/BSD)
+</p>
+
+<hr class="section-divider">
+
+<div class="callout" style="text-align: center; margin: 2rem 0;">
+  <strong>Bottom Line:</strong> You have the engines. You have the math. You have the game design spec. What you're buying with this open-source stack is the <em>delivery layer</em> — the map, the UI, the multiplayer plumbing, and the AI orchestration that turns your 19 engines into a playable, visual, tactical experience. Phase 1 is 8–10 weeks of focused work and produces something nobody else has.
+</div>
+
+</body>
+</html>

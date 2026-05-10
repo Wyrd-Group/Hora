@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AEGIS Empire</string>
+    <string name="title_activity_main">AEGIS Empire</string>
+    <string name="package_name">com.quadratic.aegis</string>
+    <string name="custom_url_scheme">com.quadratic.aegis</string>
+</resources>

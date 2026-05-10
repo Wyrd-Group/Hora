@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Transparent background for adaptive icon -->
+
+  <!-- Hexagon -->
+  <polygon points="512,332 662,418 662,592 512,678 362,592 362,418" fill="none" stroke="#00e5ff" stroke-width="4" filter="url(#glow)"/>
+
+  <!-- "A" -->
+  <text x="512" y="520" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-weight="bold" font-size="240" fill="#00e5ff" filter="url(#glow)">A</text>
+
+  <!-- "AEGIS" -->
+  <text x="512" y="660" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-weight="bold" font-size="60" fill="#E8E0D0" letter-spacing="10">AEGIS</text>
+</svg>

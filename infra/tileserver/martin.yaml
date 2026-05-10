@@ -1,0 +1,16 @@
+# Martin tile server config
+# https://maplibre.org/martin/
+
+# Serve PMTiles offline basemap when present
+mbtiles:
+  paths:
+    - /tiles
+
+# Connect to PostgreSQL for dynamic entity tiles (if needed)
+postgres:
+  connection_string: ${DATABASE_URL}
+  auto_publish:
+    tables:
+      sightings:
+        id_column: id
+        geometry_column: ~  # no geometry column — use lat/lon computed geometry

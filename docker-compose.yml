@@ -1,0 +1,124 @@
+# MSS docker-compose.yml
+# Boot:        docker compose up
+# Air-gap:     AIR_GAP_MODE=true docker compose up
+# First boot:  docker compose exec ollama ollama pull nomic-embed-text
+#              docker compose exec ollama ollama pull llama3:8b
+
+services:
+
+  # ── PostgreSQL (pgvector + Apache AGE) ─────────────────────────────────────
+  postgres:
+    build:
+      context: ./infra/postgres
+      dockerfile: Dockerfile
+    command: ["postgres", "-c", "max_connections=1000"]
+    environment:
+      POSTGRES_DB:       mss
+      POSTGRES_USER:     mss
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mssdev}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:     ["CMD", "pg_isready", "-U", "mss"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+
+  # ── Redis (pub/sub fanout for WebSocket) ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxclients", "65000"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test:     ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout:  3s
+      retries:  5
+
+  # ── FastAPI backend ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./services
+      dockerfile: api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mss:${POSTGRES_PASSWORD:-mssdev}@postgres:5432/mss
+      REDIS_URL:    redis://redis:6379
+      OLLAMA_URL:   http://ollama:11434
+      MSS_OLLAMA_URL: http://ollama:11434
+      MSS_GROQ_API_KEY: ${MSS_GROQ_API_KEY:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    ports:
+      - "8000:8000"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    healthcheck:
+      test:     ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout:  5s
+      retries:  6
+
+  # ── Ingestor worker ─────────────────────────────────────────────────────────
+  ingestor:
+    build: ./services/ingestor
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mss:${POSTGRES_PASSWORD:-mssdev}@postgres:5432/mss
+      REDIS_URL:    redis://redis:6379
+      OLLAMA_URL:   http://ollama:11434
+      AIR_GAP_MODE: ${AIR_GAP_MODE:-false}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    restart: unless-stopped
+
+  # ── Ollama (local LLM for dossier + embeddings) ─────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    # Pull models on first boot:
+    #   docker compose exec ollama ollama pull nomic-embed-text
+    #   docker compose exec ollama ollama pull llama3:8b
+
+  # ── Martin vector tile server ────────────────────────────────────────────────
+  tileserver:
+    image: ghcr.io/maplibre/martin:latest
+    command: ["--config", "/config/martin.yaml"]
+    environment:
+      DATABASE_URL: postgresql://mss:${POSTGRES_PASSWORD:-mssdev}@postgres:5432/mss
+    volumes:
+      - ./infra/tileserver/martin.yaml:/config/martin.yaml
+      - ./infra/tileserver/tiles:/tiles
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── Nginx (reverse proxy + static aegis frontend) ───────────────────────────
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./apps/empire/dist:/usr/share/nginx/html   # AEGIS Empire is the active frontend
+    ports:
+      - "80:80"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    depends_on:
+      - api
+      - tileserver
+
+volumes:
+  pg_data:
+  ollama_data:

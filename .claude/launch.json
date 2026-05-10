@@ -1,0 +1,53 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Empire Dashboard",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:empire"],
+      "port": 9999
+    },
+    {
+      "name": "Glass Network Viz",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 5173
+    },
+    {
+      "name": "Quantico OS",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 7070
+    },
+    {
+      "name": "OS Prototype",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 7777
+    },
+    {
+      "name": "FastAPI Backend",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "uvicorn", "main:app", "--reload", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "Terminal UI",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["terminal/serve.py"],
+      "port": 4000
+    },
+    {
+      "name": "Quantico IP Engine",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.mjs"],
+      "port": 8080
+    },
+    {
+      "name": "Flowcore MCP Server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--loader", "tsx", "src/mcp/server.ts"],
+      "port": 3000
+    }
+  ]
+}
