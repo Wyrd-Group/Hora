@@ -9,7 +9,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "substrate:coldstart": "tsx src/substrate/npc/prototype.ts",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
     "cap:sync": "npm run build && cap sync",
     "cap:copy": "cap copy",

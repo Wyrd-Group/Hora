@@ -1,73 +1,45 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        tactical: {
-          bg: 'var(--tw-tactical-bg, #0A0C10)',
-          panel: 'var(--tw-tactical-panel, rgba(10, 12, 16, 0.85))',
-          border: 'var(--tw-tactical-border, #1E2532)',
-          text: 'var(--tw-tactical-text, #C0CAF5)',
-          accent: 'var(--tw-tactical-accent, #00F0FF)',
-          alert: 'var(--tw-tactical-alert, #FF3366)',
-          warning: 'var(--tw-tactical-warning, #FFCC00)',
-          success: 'var(--tw-tactical-success, #00FF66)',
-          // OS component palette — used by AcademyOS, ECFLOS, SoloModesOS etc.
-          cyan:   'var(--tw-tactical-cyan, #00e5ff)',
-          green:  '#10b981',
-          amber:  '#f59e0b',
-          red:    '#ef4444',
-          muted:  'var(--tw-tactical-muted, #6b7280)',
-          bright: '#e2e8f0',
+        hora: {
+          gold: '#FFB820',
+          coral: '#FF5C6E',
+          teal: '#1FCDB8',
+          violet: '#7C5CFF',
+          sky: '#4FB8FF',
+          'bg-top': '#FFE9A8',
+          'bg-mid': '#FFAA5C',
+          'bg-bot': '#FF6B96',
+          surface: '#FFFFFF',
+          'surface-dark': '#2B1B5C',
+          text: '#1A1530',
+          'text-muted': '#5C5470',
         },
-        empire: {
-          player: '#10b981',
-          market: '#ef4444',
-          rival: '#f59e0b',
-          finance: '#00e5ff',
-          tech: '#7c3aed',
-          oil: '#f59e0b',
-          mfg: '#6366f1',
-          energy: '#10b981',
-          pharma: '#ec4899',
-          venue: '#a78bfa',
-        }
       },
       fontFamily: {
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        display: ['Fredoka', 'SF Pro Rounded', 'system-ui', 'sans-serif'],
+        sans: ['Nunito', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        mono: ['"Space Grotesk"', 'ui-monospace', 'monospace'],
+      },
+      borderRadius: { '4xl': '2rem' },
+      boxShadow: {
+        juicy: '0 6px 14px rgba(0, 0, 0, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.15)',
+        'juicy-lg': '0 12px 28px rgba(0, 0, 0, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.15)',
       },
       keyframes: {
-        'ticker-scroll': {
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' },
-        },
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        'card-reveal': {
-          '0%': { opacity: '0', transform: 'translateY(20px) scale(0.9)' },
-          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
-        },
+        'coin-pour': { '0%': { transform: 'translateY(-100%)', opacity: '0' }, '50%': { opacity: '1' }, '100%': { transform: 'translateY(100%)', opacity: '0' } },
+        'pop-in': { '0%': { transform: 'scale(0.6)', opacity: '0' }, '70%': { transform: 'scale(1.08)', opacity: '1' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+        wiggle: { '0%, 100%': { transform: 'rotate(-2deg)' }, '50%': { transform: 'rotate(2deg)' } },
       },
       animation: {
-        'ticker-scroll': 'ticker-scroll 60s linear infinite',
-        'fade-in': 'fade-in 0.3s ease both',
-        'card-reveal': 'card-reveal 0.5s ease both',
-      }
+        'coin-pour': 'coin-pour 0.8s ease-in-out',
+        'pop-in': 'pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        wiggle: 'wiggle 0.6s ease-in-out infinite',
+      },
     },
   },
   plugins: [],
-  // Safelist dynamic classes used in SoloModesOS and other OS components
-  safelist: [
-    { pattern: /^text-tactical-(cyan|green|amber|red|muted|bright)$/ },
-    { pattern: /^border-tactical-(cyan|green|amber|red|muted|bright)(\/\d+)?$/ },
-    { pattern: /^bg-tactical-(cyan|green|amber|red|muted|bright)(\/\d+)?$/ },
-  ],
-}
+};
