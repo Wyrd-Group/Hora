@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AEGIS — Empire Command</title>
+<link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060a12;overflow:hidden;font-family:'Courier New',monospace;color:#e2e8f0}
+#map{position:fixed;inset:0;z-index:0}
+.maplibregl-ctrl-bottom-left,.maplibregl-ctrl-bottom-right,.maplibregl-ctrl-top-left,.maplibregl-ctrl-top-right{display:none!important}
+
+/* Top Bar */
+.top-bar{position:fixed;top:0;left:0;right:0;height:40px;background:rgba(6,10,18,0.92);border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:30;backdrop-filter:blur(8px)}
+.logo{font-size:13px;color:#00e5ff;font-weight:700;letter-spacing:0.15em}
+.logo-sub{font-size:9px;color:#94a3b8;letter-spacing:0.05em;margin-left:12px}
+.layer-btn{padding:2px 8px;font-family:monospace;font-size:8px;border:1px solid #1e293b;background:transparent;color:#475569;border-radius:3px;cursor:pointer;letter-spacing:0.1em;margin-left:4px}
+.layer-btn.active{border-color:var(--lc);background:color-mix(in srgb,var(--lc) 12%,transparent);color:var(--lc)}
+.cmd-btn{padding:3px 12px;font-family:monospace;font-size:9px;border:1px solid #1e293b;background:#111827;color:#64748b;border-radius:4px;cursor:pointer;margin-left:12px}
+.cmd-btn:hover{border-color:#00e5ff;color:#00e5ff}
+
+/* Left Rail */
+.left-rail{position:fixed;left:12px;top:52px;bottom:44px;width:320px;background:rgba(10,14,23,0.92);border:1px solid #1e293b;border-radius:12px;z-index:20;display:flex;flex-direction:column;backdrop-filter:blur(16px);transition:transform 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.4);overflow:hidden}
+.left-rail.closed{transform:translateX(-344px)}
+.rail-toggle{position:fixed;top:50%;z-index:25;width:20px;height:40px;background:#0f1729;border:1px solid #1e293b;color:#64748b;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;transition:left 0.3s;border-radius:0 4px 4px 0}
+
+/* Sections */
+.section{padding:12px;border-bottom:1px solid #1e293b}
+.wallet-row{display:flex;gap:8px}
+.wallet{background:#111827;border:1px solid #1e293b;border-radius:6px;padding:8px 12px;flex:1}
+.wallet-label{font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em}
+.wallet-val{font-size:18px;font-weight:700;margin-top:2px}
+.wallet-sub{font-size:8px;color:#10b981;margin-top:1px}
+.nw-bar{margin-top:8px;background:#111827;border-radius:6px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center}
+.nw-label{font-size:8px;color:#64748b}
+.nw-val{font-size:14px;font-weight:700}
+
+.struct-row{display:flex;justify-content:space-between;margin-bottom:8px}
+.struct-badge{font-size:9px;color:#7c3aed;background:#7c3aed15;padding:2px 6px;border-radius:3px}
+.tax-label{font-size:9px;color:#64748b}
+
+.axis{margin-bottom:8px}
+.axis-header{display:flex;justify-content:space-between;font-size:9px;color:#94a3b8;margin-bottom:2px}
+.axis-track{height:4px;background:#1e293b;border-radius:2px}
+.axis-fill{height:100%;border-radius:2px;transition:width 0.6s}
+
+.heat-followers{display:flex;justify-content:space-between;margin-top:8px;font-size:8px;color:#64748b}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid #1e293b}
+.tab{flex:1;padding:8px 0;font-size:8px;letter-spacing:0.1em;color:#475569;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:monospace}
+.tab.active{color:#00e5ff;border-bottom-color:#00e5ff}
+
+.tab-content{flex:1;overflow-y:auto;padding:12px}
+.tab-title{font-size:9px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em}
+
+/* Asset cards */
+.asset-card{background:#111827;border:1px solid #1e293b;border-radius:6px;padding:8px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:border-color 0.2s}
+.asset-card:hover{border-color:#00e5ff}
+.asset-name{font-size:10px}
+.asset-type{font-size:8px;margin-top:1px}
+.asset-income{font-size:10px;color:#10b981}
+.asset-building{font-size:9px;color:#f59e0b}
+
+/* Dept cards */
+.dept-card{background:#111827;border:1px solid #1e293b33;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all 0.2s}
+.dept-card:hover{box-shadow:0 0 20px rgba(100,100,255,0.08)}
+.dept-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.dept-badge{font-size:8px;text-transform:uppercase;letter-spacing:0.15em;padding:2px 6px;border-radius:3px}
+.dept-success{font-size:8px;color:#64748b}
+.dept-name{font-size:12px;font-weight:600;margin-bottom:4px}
+.dept-effect{font-size:9px;color:#94a3b8;margin-bottom:8px}
+.dept-footer{display:flex;justify-content:space-between;border-top:1px solid #1e293b;padding-top:6px}
+.dept-cost{font-size:9px;color:#f59e0b}
+.dept-focus{font-size:9px;color:#64748b}
+
+/* Market cards */
+.market-card{background:#111827;border:1px solid #ef444433;border-radius:6px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s}
+.market-card:hover{border-color:#ef4444}
+.market-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.market-name{font-size:11px;font-weight:600}
+.market-type{font-size:8px;padding:2px 6px;border-radius:3px}
+.market-prices{display:flex;justify-content:space-between;font-size:9px}
+
+/* Crime panel */
+.crime-title{font-size:9px;color:#ef4444;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em}
+.heat-display{background:#111827;border-radius:6px;padding:8px;margin-bottom:12px;text-align:center}
+.heat-num{font-size:28px;font-weight:700;color:#f59e0b}
+.heat-track{height:6px;background:#1e293b;border-radius:3px;margin-top:4px}
+.heat-fill{height:100%;background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444);border-radius:3px}
+.bank-card{background:#111827;border:1px solid #1e293b;border-radius:6px;padding:8px;margin-bottom:6px}
+.bank-name{font-size:10px}
+.bank-desc{font-size:8px;color:#64748b;margin-top:2px}
+.crime-op{background:#11182790;border:1px solid #ef444422;border-radius:6px;padding:8px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s}
+.crime-op:hover{border-color:#ef4444}
+.crime-row{display:flex;justify-content:space-between}
+.crime-name{font-size:10px;color:#ef4444;font-weight:600}
+.crime-heat{font-size:8px;color:#f59e0b}
+.crime-stats{font-size:8px;color:#64748b;margin-top:2px}
+
+/* Right Panel */
+.right-panel{position:fixed;right:0;top:40px;bottom:32px;width:320px;background:rgba(10,14,23,0.97);border-left:1px solid #1e293b;z-index:25;padding:16px;overflow-y:auto;backdrop-filter:blur(12px);transition:transform 0.3s}
+.right-panel.closed{transform:translateX(320px)}
+.rp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.rp-type{font-size:8px;text-transform:uppercase;letter-spacing:0.15em;padding:3px 8px;border-radius:3px}
+.rp-close{background:none;border:none;color:#64748b;cursor:pointer;font-size:16px}
+.rp-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.rp-coords{font-size:9px;color:#64748b;margin-bottom:16px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-box{background:#111827;border-radius:6px;padding:8px;text-align:center}
+.stat-label{font-size:8px;color:#64748b;margin-bottom:2px}
+.stat-val{font-weight:700}
+.building-bar{background:#f59e0b15;border:1px solid #f59e0b33;border-radius:6px;padding:8px;margin-bottom:12px}
+.card-roster-title{font-size:9px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em}
+.roster-card{background:#111827;border-radius:6px;padding:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.roster-icon{width:32px;height:32px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.roster-name{font-size:10px;font-weight:600}
+.roster-tier{font-size:8px}
+.roster-stat{font-size:8px;color:#10b981}
+.upgrade-btn,.build-btn,.buy-btn,.strike-btn{width:100%;padding:10px 0;border-radius:6px;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;margin-top:8px}
+.rival-box{background:#f59e0b10;border:1px solid #f59e0b22;border-radius:6px;padding:12px;text-align:center;margin-top:8px}
+.redacted{font-size:20px;color:#f59e0b33;letter-spacing:0.3em;margin-top:8px}
+
+/* Command Terminal */
+.terminal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding-top:120px;backdrop-filter:blur(4px)}
+.terminal{width:520px;background:#0f1729;border:1px solid #1e293b;border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.6);overflow:hidden}
+.terminal-input-row{padding:12px 16px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px}
+.terminal-input{flex:1;background:none;border:none;outline:none;color:#e2e8f0;font-family:monospace;font-size:13px}
+.terminal-esc{font-family:monospace;font-size:8px;color:#475569;border:1px solid #1e293b;padding:2px 6px;border-radius:3px}
+.cmd-list{max-height:360px;overflow-y:auto}
+.cmd-item{padding:10px 16px;cursor:pointer;transition:background 0.1s}
+.cmd-item:hover{background:#00e5ff08}
+.cmd-item-label{font-size:12px}
+.cmd-item-desc{font-size:9px;color:#64748b}
+
+/* Maven Panel */
+.maven-panel{position:fixed;top:40px;right:0;bottom:32px;width:380px;background:rgba(10,14,23,0.98);border-left:1px solid #7c3aed33;z-index:24;display:flex;flex-direction:column;backdrop-filter:blur(12px);transition:transform 0.3s}
+.maven-panel.closed{transform:translateX(380px)}
+.maven-header{padding:12px;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;align-items:center}
+.maven-dot{width:8px;height:8px;border-radius:50%;background:#7c3aed;box-shadow:0 0 12px #7c3aed;display:inline-block}
+.maven-title{font-size:11px;color:#7c3aed;font-weight:700;letter-spacing:0.15em;margin-left:8px}
+.maven-active{font-size:8px;color:#10b981;background:#10b98115;padding:1px 6px;border-radius:10px;margin-left:8px}
+.maven-body{flex:1;padding:12px;overflow-y:auto}
+.maven-card{border-radius:8px;padding:12px;margin-bottom:12px}
+.maven-card-title{font-size:8px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.15em}
+.maven-card-body{font-size:11px;line-height:1.6}
+
+/* Pack Overlay */
+.pack-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:50;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.pack-box{width:200px;height:280px;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #ffd70066;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 40px rgba(255,215,0,0.15);transition:all 0.3s;text-align:center}
+.pack-box:hover{transform:scale(1.05);box-shadow:0 0 60px rgba(255,215,0,0.3)}
+.pack-q{font-size:24px;color:#ffd700;font-weight:700;letter-spacing:0.1em}
+.pack-label{font-size:8px;color:#ffd70088;margin-top:4px;text-transform:uppercase;letter-spacing:0.2em}
+.pack-tap{font-size:7px;color:#64748b;margin-top:8px}
+.pack-cards{display:flex;gap:16px}
+.revealed-card{width:160px;height:220px;background:linear-gradient(135deg,#111827,#1a2236);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn 0.5s ease both}
+.revealed-card:nth-child(2){animation-delay:0.15s}
+.revealed-card:nth-child(3){animation-delay:0.3s}
+.rc-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;margin-bottom:8px}
+.rc-tier{font-size:8px;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:4px}
+.rc-name{font-size:11px;font-weight:600;text-align:center;margin-bottom:2px}
+.rc-role{font-size:8px;color:#94a3b8;margin-bottom:8px}
+.rc-stat{font-size:8px;color:#10b981;background:#10b98115;padding:2px 8px;border-radius:10px}
+
+/* HUD */
+.hud{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:8px}
+.hud-btn{padding:5px 16px;font-family:monospace;font-size:9px;border-radius:20px;cursor:pointer;letter-spacing:0.1em;transition:all 0.2s;backdrop-filter:blur(8px)}
+.hud-btn:hover{filter:brightness(1.5)}
+
+/* Ticker */
+.ticker{position:fixed;bottom:0;left:0;right:0;height:32px;background:rgba(6,10,18,0.95);border-top:1px solid #1e293b;overflow:hidden;z-index:30;display:flex;align-items:center}
+.ticker-track{display:flex;gap:40px;animation:scroll 60s linear infinite;white-space:nowrap;padding-left:100%}
+.ticker-item{font-size:10px;letter-spacing:0.05em}
+
+/* Map markers */
+.node-marker{border-radius:50%;cursor:pointer;position:relative;transition:transform 0.2s}
+.node-marker:hover{transform:scale(1.5);z-index:100!important}
+.node-marker::before{content:'';position:absolute;inset:-6px;border-radius:50%;background:inherit;opacity:0.15}
+.node-marker::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:inherit;opacity:0.3}
+.node-label{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:monospace;font-size:9px;color:#94a3b8;padding:1px 4px;pointer-events:none;margin-bottom:4px}
+
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px) scale(0.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 8px var(--gc)}50%{box-shadow:0 0 20px var(--gc),0 0 40px var(--gc)}}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 var(--gc)}100%{box-shadow:0 0 0 15px transparent}}
+@keyframes shimmer{0%{opacity:0.3}50%{opacity:0.8}100%{opacity:0.3}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:2px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div style="display:flex;align-items:center">
+    <span class="logo">AEGIS</span>
+    <span style="color:#64748b;margin:0 8px">|</span>
+    <span class="logo-sub">EMPIRE COMMAND</span>
+  </div>
+  <div style="display:flex;align-items:center">
+    <button class="layer-btn active" style="--lc:#10b981" data-layer="corporate">CORPORATE</button>
+    <button class="layer-btn" style="--lc:#0ea5e9" data-layer="routes" id="routesBtn">ROUTES</button>
+    <button class="layer-btn" style="--lc:#ef4444" data-layer="threats">THREATS</button>
+    <button class="layer-btn" style="--lc:#a78bfa" data-layer="sentiment">SENTIMENT</button>
+    <button class="layer-btn" style="--lc:#10b981" data-layer="esg">ESG</button>
+    <button class="cmd-btn" id="cmdBtn"><span style="color:#00e5ff">▶</span> COMMAND <span style="color:#475569;font-size:8px">⌘K</span></button>
+  </div>
+</div>
+
+<!-- LEFT RAIL -->
+<div class="left-rail" id="leftRail">
+  <div class="section">
+    <div class="wallet-row">
+      <div class="wallet"><div class="wallet-label">Personal</div><div class="wallet-val">€47K</div></div>
+      <div class="wallet"><div class="wallet-label">Company</div><div class="wallet-val">€313K</div><div class="wallet-sub">+€295K/mo</div></div>
+    </div>
+    <div class="nw-bar"><span class="nw-label">NET WORTH</span><span class="nw-val">€1.8M</span></div>
+  </div>
+  <div class="section">
+    <div class="struct-row"><span class="struct-badge">Privately Held (LLC)</span><span class="tax-label">Tax: 15%</span></div>
+    <div class="axis"><div class="axis-header"><span>GROWTH</span><span style="color:#00e5ff">45/100</span></div><div class="axis-track"><div class="axis-fill" style="width:45%;background:#00e5ff"></div></div></div>
+    <div class="axis"><div class="axis-header"><span>GOVERNANCE</span><span style="color:#10b981">38/100</span></div><div class="axis-track"><div class="axis-fill" style="width:38%;background:#10b981"></div></div></div>
+    <div class="axis"><div class="axis-header"><span>IMPACT</span><span style="color:#a78bfa">22/100</span></div><div class="axis-track"><div class="axis-fill" style="width:22%;background:#a78bfa"></div></div></div>
+    <div class="axis"><div class="axis-header"><span>POWER</span><span style="color:#f59e0b">15/100</span></div><div class="axis-track"><div class="axis-fill" style="width:15%;background:#f59e0b"></div></div></div>
+    <div class="heat-followers">
+      <span>HEAT: <span style="color:#f59e0b">23/100</span></span>
+      <span>FOLLOWERS: <span style="color:#00e5ff">2,847</span></span>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">OVERVIEW</button>
+    <button class="tab" data-tab="departments">DEPARTMENTS</button>
+    <button class="tab" data-tab="marketplace">MARKET</button>
+    <button class="tab" data-tab="crime">DEFCON</button>
+  </div>
+  <div class="tab-content" id="tabContent"></div>
+</div>
+
+<!-- Rail toggle -->
+<button class="rail-toggle" id="railToggle" style="left:333px">‹</button>
+
+<!-- Right Panel (node detail) -->
+<div class="right-panel closed" id="rightPanel"></div>
+
+<!-- Command Terminal -->
+<div class="terminal-overlay hidden" id="terminalOverlay">
+  <div class="terminal">
+    <div class="terminal-input-row">
+      <span style="color:#00e5ff;font-size:14px">▶</span>
+      <input class="terminal-input" id="terminalInput" placeholder="Type a command..." />
+      <span class="terminal-esc">ESC</span>
+    </div>
+    <div class="cmd-list" id="cmdList"></div>
+  </div>
+</div>
+
+<!-- Maven Panel -->
+<div class="maven-panel closed" id="mavenPanel">
+  <div class="maven-header">
+    <div style="display:flex;align-items:center">
+      <span class="maven-dot"></span>
+      <span class="maven-title">MAVEN AI</span>
+      <span class="maven-active">ACTIVE</span>
+    </div>
+    <button class="rp-close" id="mavenClose">✕</button>
+  </div>
+  <div class="maven-body">
+    <div class="maven-card" style="background:#7c3aed10;border:1px solid #7c3aed22">
+      <div class="maven-card-title" style="color:#7c3aed">Autonomous Recommendation</div>
+      <div class="maven-card-body">Priority acquisition detected: <span style="color:#ef4444">Zurich Pharma Campus</span> is undervalued by 23% relative to sector median. Current CAPEX of €2.4M will generate estimated €180K/month at L3 with your existing card roster. ROI breakeven: 13.3 months.</div>
+    </div>
+    <div class="maven-card" style="background:#f59e0b10;border:1px solid #f59e0b22">
+      <div class="maven-card-title" style="color:#f59e0b">Storm Warning</div>
+      <div class="maven-card-body">Macro signal: ECB rate decision in 24h. Historical correlation shows 73% probability of EUR-denominated asset repricing. Recommend hedging Gulf Oil Platform exposure via Banque Suisse forex desk.</div>
+    </div>
+    <div class="maven-card" style="background:#10b98110;border:1px solid #10b98122">
+      <div class="maven-card-title" style="color:#10b981">Route Optimization</div>
+      <div class="maven-card-body">Redirecting Shanghai → Singapore route via air freight saves 4.2 days transit time at +€12K/month OPEX. Net throughput increase: +18%. Recommend approval.</div>
+    </div>
+    <div style="margin-top:16px;font-size:8px;color:#64748b;text-align:center">MAVEN RETAINER: €500K/MONTH FROM SANDBOX BALANCE</div>
+  </div>
+</div>
+
+<!-- Pack Overlay -->
+<div class="pack-overlay hidden" id="packOverlay">
+  <div id="packContent" style="text-align:center"></div>
+</div>
+
+<!-- HUD Buttons -->
+<div class="hud">
+  <button class="hud-btn" id="mavenBtn" style="border:1px solid #7c3aed44;background:#7c3aed10;color:#7c3aedaa">MAVEN AI</button>
+  <button class="hud-btn" id="packBtn" style="border:1px solid #ffd70044;background:#ffd70010;color:#ffd700aa">OPEN PACK</button>
+  <button class="hud-btn" style="border:1px solid #f59e0b44;background:#f59e0b10;color:#f59e0baa">INTEL HUB</button>
+</div>
+
+<!-- Ticker -->
+<div class="ticker"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+<script>
+// ── DATA ───────────────────────────────────────────────────────────
+const NODES=[
+  {id:1,name:"Deutsche Finanz HQ",type:"finance",owner:"player",lat:52.52,lon:13.405,level:3,income:42000,status:"operational"},
+  {id:2,name:"The Brass Tap",type:"venue",owner:"player",lat:48.86,lon:2.35,level:2,income:8500,status:"operational"},
+  {id:3,name:"Nordic R&D Lab",type:"tech",owner:"player",lat:59.33,lon:18.07,level:1,income:15200,status:"building",endsIn:"2d 14h"},
+  {id:4,name:"Gulf Oil Platform",type:"oil_gas",owner:"player",lat:25.3,lon:55.3,level:4,income:128000,status:"operational"},
+  {id:5,name:"Shanghai Logistics Hub",type:"manufacturing",owner:"player",lat:31.23,lon:121.47,level:2,income:34000,status:"operational"},
+  {id:6,name:"Zurich Pharma Campus",type:"pharma",owner:"market",lat:47.37,lon:8.54,capex:2400000,opex:85000},
+  {id:7,name:"Lagos Energy Grid",type:"energy",owner:"market",lat:6.45,lon:3.4,capex:890000,opex:32000},
+  {id:8,name:"São Paulo Tower",type:"venue",owner:"market",lat:-23.55,lon:-46.63,capex:450000,opex:18000},
+  {id:9,name:"Mumbai Tech Park",type:"tech",owner:"market",lat:19.08,lon:72.88,capex:1800000,opex:62000},
+  {id:10,name:"Cairo Trade Center",type:"finance",owner:"rival",lat:30.04,lon:31.24,level:3,income:52000},
+  {id:11,name:"Rival Refinery",type:"oil_gas",owner:"rival",lat:55.75,lon:37.62,level:5,income:210000},
+  {id:12,name:"Singapore Port",type:"manufacturing",owner:"player",lat:1.35,lon:103.82,level:3,income:67000,status:"operational"},
+];
+const ROUTES=[
+  {from:{lon:55.3,lat:25.3},to:{lon:103.82,lat:1.35},type:"sea"},
+  {from:{lon:13.405,lat:52.52},to:{lon:2.35,lat:48.86},type:"rail"},
+  {from:{lon:121.47,lat:31.23},to:{lon:103.82,lat:1.35},type:"air"},
+  {from:{lon:18.07,lat:59.33},to:{lon:13.405,lat:52.52},type:"truck"},
+];
+const DEPTS=[
+  {id:"hr1",dept:"HR",name:"Recruitment Drive",cost:15000,focus:2,success:85,effect:"+2 staff capacity, +3 Growth"},
+  {id:"hr2",dept:"HR",name:"Employee Training",cost:8000,focus:1,success:92,effect:"+10% dept efficiency"},
+  {id:"tf1",dept:"Trading",name:"Algorithm Backtest",cost:25000,focus:3,success:70,effect:"+15% trading income"},
+  {id:"tf2",dept:"Trading",name:"Market Analysis",cost:12000,focus:1,success:88,effect:"Reveal 2 undervalued nodes"},
+  {id:"mk1",dept:"Marketing",name:"Brand Campaign",cost:35000,focus:2,success:78,effect:"+20% regional sentiment"},
+  {id:"mk2",dept:"Marketing",name:"Influencer Partnership",cost:18000,focus:1,success:82,effect:"+500 followers"},
+  {id:"rd1",dept:"R&D",name:"Product Innovation",cost:50000,focus:4,success:55,effect:"+25% throughput, +5 Growth"},
+  {id:"rd2",dept:"R&D",name:"Patent Filing",cost:20000,focus:2,success:65,effect:"IP protection +1 product"},
+  {id:"fn1",dept:"Finance",name:"Tax Optimisation",cost:30000,focus:2,success:75,effect:"-3% effective tax rate"},
+  {id:"fn2",dept:"Finance",name:"IPO Readiness",cost:100000,focus:5,success:45,effect:"Unlock Public Company path"},
+  {id:"fn3",dept:"Finance",name:"Quarterly Audit",cost:10000,focus:1,success:95,effect:"+5 Governance"},
+  {id:"lg1",dept:"Legal",name:"Compliance Review",cost:15000,focus:1,success:90,effect:"-15% crime detection"},
+  {id:"lg2",dept:"Legal",name:"Government Relations",cost:40000,focus:3,success:60,effect:"+8 Power axis"},
+];
+const CARDS=[
+  {name:"Elena Voss",role:"Supply Chain Manager",tier:"Gold",stat:"+35% logistics throughput"},
+  {name:"James Chen",role:"Quantitative Analyst",tier:"Diamond",stat:"+55% trading algorithm yield"},
+  {name:"Amara Osei",role:"Security Specialist",tier:"Silver",stat:"-15% crime detection rate"},
+];
+const CRIMES=[
+  {name:"Tax Evasion",detection:15,penalty:"2x",axisHit:"Gov -15",heat:"+12"},
+  {name:"Insider Trading",detection:8,penalty:"3x",axisHit:"Gov -20",heat:"+18"},
+  {name:"Money Laundering",detection:3,penalty:"5x",axisHit:"Gov -30",heat:"+25"},
+  {name:"Bribery",detection:6,penalty:"2.5x",axisHit:"Gov -10, Power +5",heat:"+15"},
+];
+const BANKS=[
+  {name:"Deutsche Finanz",audit:"1.0x",desc:"Standard audit. No modifier."},
+  {name:"Banque Suisse",audit:"0.7x",desc:"Reduced detection. 2x penalty."},
+  {name:"Banco Cayman",audit:"0.4x",desc:"Minimal detection. 3x penalty if caught."},
+];
+const TICKER=[
+  {text:"EUR/USD 1.0842 +0.12%",type:"fx"},{text:"BTC $67,421 -1.8%",type:"crypto"},
+  {text:"CRUDE $78.42/bbl +2.1%",type:"commodity"},{text:"INTEL: Nordic R&D Lab construction 68% complete",type:"intel"},
+  {text:"AI DIRECTOR: Trade blockade forming in Strait of Hormuz",type:"alert"},{text:"CRIME: Heat level stable at 23/100",type:"crime"},
+  {text:"BOARD: Q2 vote in 14 days — CEO approval at 72%",type:"board"},{text:"ETH $3,891 +0.4%",type:"crypto"},
+  {text:"SENTINEL: Investment memo ready for Zurich Pharma",type:"intel"},{text:"MACRO: ECB rate decision tomorrow — volatility expected",type:"alert"},
+  {text:"GBP/EUR 0.8621 -0.05%",type:"fx"},{text:"RIVAL: Moscow Cartel acquired Lagos infrastructure",type:"alert"},
+];
+const CMD_ITEMS=[
+  {label:"Buy Infrastructure",desc:"Browse available nodes on the market",key:"market"},
+  {label:"Run Department Project",desc:"Execute a project from your departments",key:"dept"},
+  {label:"Open Pack",desc:"Pull manager and specialist cards",key:"pack"},
+  {label:"View Trade Routes",desc:"Toggle logistics overlay on map",key:"routes"},
+  {label:"Tax Routing Setup",desc:"Configure capital flow through shell nodes",key:"tax"},
+  {label:"Execute Crime",desc:"Access DEFCON warfare panel",key:"crime"},
+  {label:"Deploy Sentinel Agent",desc:"Generate investment memo (costs Q-Coins)",key:"sentinel"},
+  {label:"Change Corporate Structure",desc:"Upgrade to Partnership, LLC, or Public",key:"structure"},
+  {label:"Activate Maven AI",desc:"Enable autonomous empire management",key:"maven"},
+  {label:"Scan for Opportunities",desc:"Intelligence scan for undervalued nodes",key:"scan"},
+];
+
+const SECTOR_COL={finance:"#00e5ff",tech:"#7c3aed",oil_gas:"#f59e0b",manufacturing:"#6366f1",energy:"#10b981",pharma:"#ec4899",venue:"#a78bfa"};
+const OWNER_COL={player:"#10b981",market:"#ef4444",rival:"#f59e0b"};
+const TIER_COL={Bronze:"#cd7f32",Silver:"#c0c0c0",Gold:"#ffd700",Diamond:"#b9f2ff"};
+const TICKER_COL={fx:"#00e5ff",crypto:"#7c3aed",commodity:"#f59e0b",intel:"#10b981",alert:"#ef4444",crime:"#f59e0b",board:"#a78bfa"};
+const DEPT_COL={HR:"#10b981",Trading:"#00e5ff",Marketing:"#f472b6","R&D":"#7c3aed",Finance:"#f59e0b",Legal:"#6366f1"};
+
+const fmt=n=>n>=1e6?`€${(n/1e6).toFixed(1)}M`:n>=1e3?`€${(n/1e3).toFixed(0)}K`:`€${n}`;
+
+// ── STATE ──────────────────────────────────────────────────────────
+let activeTab="overview", selectedNode=null, showRoutes=false, leftOpen=true, mavenOpen=false;
+let map, markers=[], routeAdded=false;
+
+// ── MAP INIT ───────────────────────────────────────────────────────
+function initMap(){
+  map=new maplibregl.Map({
+    container:'map',
+    style:'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    center:[20,30],zoom:2.2,pitch:15,bearing:0,minZoom:1.5,maxZoom:8,attributionControl:false,
+  });
+  map.on('load',()=>{addMarkers();});
+}
+
+function addMarkers(){
+  markers.forEach(m=>m.remove());
+  markers=[];
+  NODES.forEach(n=>{
+    const el=document.createElement('div');
+    el.className='node-marker';
+    const c=OWNER_COL[n.owner];
+    const sz=n.owner==='player'?(n.level||1)*3+6:10;
+    el.style.cssText=`width:${sz}px;height:${sz}px;background:${c};--gc:${c};animation:glow-pulse 3s infinite;`;
+    if(n.status==='building')el.style.animation+=',pulse-ring 2s ease-out infinite';
+    if(n.owner==='player'){
+      const lbl=document.createElement('div');
+      lbl.className='node-label';
+      lbl.textContent=n.name.split(' ').slice(-1)[0];
+      el.appendChild(lbl);
+    }
+    el.addEventListener('click',e=>{e.stopPropagation();selectNode(n);});
+    const mk=new maplibregl.Marker({element:el}).setLngLat([n.lon,n.lat]).addTo(map);
+    markers.push(mk);
+  });
+}
+
+function toggleRoutes(){
+  showRoutes=!showRoutes;
+  const btn=document.getElementById('routesBtn');
+  btn.classList.toggle('active',showRoutes);
+  if(!map.isStyleLoaded())return;
+  const routeCol={sea:"#0ea5e9",rail:"#a78bfa",air:"#f472b6",truck:"#fbbf24"};
+  if(map.getSource('trade-routes')){
+    map.setLayoutProperty('trade-routes-layer','visibility',showRoutes?'visible':'none');
+    return;
+  }
+  if(!showRoutes)return;
+  const features=ROUTES.map(r=>({type:'Feature',properties:{color:routeCol[r.type]||'#64748b'},geometry:{type:'LineString',coordinates:[[r.from.lon,r.from.lat],[r.to.lon,r.to.lat]]}}));
+  map.addSource('trade-routes',{type:'geojson',data:{type:'FeatureCollection',features}});
+  map.addLayer({id:'trade-routes-layer',type:'line',source:'trade-routes',paint:{'line-color':['get','color'],'line-width':2,'line-opacity':0.6,'line-dasharray':[3,2]}});
+}
+
+function selectNode(n){
+  selectedNode=n;
+  renderRightPanel();
+  if(map)map.flyTo({center:[n.lon,n.lat],zoom:5,duration:1500});
+}
+
+// ── RENDER FUNCTIONS ───────────────────────────────────────────────
+function renderTab(){
+  const el=document.getElementById('tabContent');
+  if(activeTab==='overview'){
+    const owned=NODES.filter(n=>n.owner==='player');
+    el.innerHTML=`<div class="tab-title">Owned Assets (${owned.length})</div>`+owned.map(n=>`
+      <div class="asset-card" data-id="${n.id}" onmouseenter="this.style.borderColor='${SECTOR_COL[n.type]}'" onmouseleave="this.style.borderColor='#1e293b'">
+        <div><div class="asset-name">${n.name}</div><div class="asset-type" style="color:${SECTOR_COL[n.type]}">${n.type.replace('_',' & ')} L${n.level}</div></div>
+        <div>${n.status==='building'?'<span class="asset-building">BUILDING</span>':`<span class="asset-income">${fmt(n.income)}/mo</span>`}</div>
+      </div>`).join('');
+    el.querySelectorAll('.asset-card').forEach(c=>c.addEventListener('click',()=>selectNode(NODES.find(n=>n.id==c.dataset.id))));
+  } else if(activeTab==='departments'){
+    el.innerHTML=`<div class="tab-title">Department Projects (EA FC Matrix)</div>`+DEPTS.map(p=>{const c=DEPT_COL[p.dept]||'#64748b';return`
+      <div class="dept-card" style="border-color:${c}33" onmouseenter="this.style.borderColor='${c}';this.style.boxShadow='0 0 20px ${c}22'" onmouseleave="this.style.borderColor='${c}33';this.style.boxShadow='none'">
+        <div class="dept-header"><span class="dept-badge" style="color:${c};background:${c}15">${p.dept}</span><span class="dept-success">${p.success}% success</span></div>
+        <div class="dept-name">${p.name}</div><div class="dept-effect">${p.effect}</div>
+        <div class="dept-footer"><span class="dept-cost">${fmt(p.cost)}</span><span class="dept-focus">${p.focus} focus sessions</span></div>
+      </div>`;}).join('');
+  } else if(activeTab==='marketplace'){
+    const avail=NODES.filter(n=>n.owner==='market');
+    el.innerHTML=`<div class="tab-title">Available Infrastructure</div>`+avail.map(n=>`
+      <div class="market-card" data-id="${n.id}">
+        <div class="market-header"><span class="market-name">${n.name}</span><span class="market-type" style="color:${SECTOR_COL[n.type]};background:${SECTOR_COL[n.type]}15">${n.type.replace('_',' & ')}</span></div>
+        <div class="market-prices"><span style="color:#ef4444">CAPEX: ${fmt(n.capex)}</span><span style="color:#f59e0b">OPEX: ${fmt(n.opex)}/mo</span></div>
+      </div>`).join('');
+    el.querySelectorAll('.market-card').forEach(c=>c.addEventListener('click',()=>selectNode(NODES.find(n=>n.id==c.dataset.id))));
+  } else if(activeTab==='crime'){
+    el.innerHTML=`
+      <div class="crime-title">DEFCON Warfare Panel</div>
+      <div class="heat-display"><div style="font-size:8px;color:#64748b;margin-bottom:4px">HEAT LEVEL</div><div class="heat-num">23</div><div class="heat-track"><div class="heat-fill" style="width:23%"></div></div></div>
+      <div style="font-size:8px;color:#64748b;margin-bottom:6px">ACTIVE BANK</div>
+      ${BANKS.map(b=>`<div class="bank-card"><div class="bank-name">${b.name} <span style="color:#f59e0b">(${b.audit} audit)</span></div><div class="bank-desc">${b.desc}</div></div>`).join('')}
+      <div style="font-size:8px;color:#64748b;margin-bottom:6px;margin-top:12px">AVAILABLE OPERATIONS</div>
+      ${CRIMES.map(c=>`<div class="crime-op"><div class="crime-row"><span class="crime-name">${c.name}</span><span class="crime-heat">${c.heat} heat</span></div><div class="crime-stats">Detection: ${c.detection}% | Penalty: ${c.penalty} | ${c.axisHit}</div></div>`).join('')}`;
+  }
+}
+
+function renderRightPanel(){
+  const rp=document.getElementById('rightPanel');
+  if(!selectedNode){rp.classList.add('closed');return;}
+  rp.classList.remove('closed');
+  const n=selectedNode, c=SECTOR_COL[n.type]||'#64748b';
+  let html=`<div class="rp-header"><span class="rp-type" style="color:${c};background:${c}15">${n.type.replace('_',' & ')}</span><button class="rp-close" id="rpClose">✕</button></div>
+    <div class="rp-name">${n.name}</div><div class="rp-coords">${n.lat.toFixed(2)}°N, ${n.lon.toFixed(2)}°E</div>`;
+
+  if(n.owner==='player'){
+    html+=`<div class="stat-grid"><div class="stat-box"><div class="stat-label">LEVEL</div><div class="stat-val" style="font-size:20px;color:${c}">${n.level}/5</div></div><div class="stat-box"><div class="stat-label">INCOME/MO</div><div class="stat-val" style="font-size:14px;color:#10b981">${fmt(n.income)}</div></div></div>`;
+    if(n.status==='building')html+=`<div class="building-bar"><div style="font-size:8px;color:#f59e0b;margin-bottom:4px">UNDER CONSTRUCTION</div><div class="axis-track"><div class="axis-fill" style="width:68%;background:#f59e0b"></div></div><div style="font-size:9px;color:#f59e0b;margin-top:4px">Completes in ${n.endsIn}</div></div>`;
+    html+=`<div class="card-roster-title">Card Roster</div>`;
+    CARDS.forEach(card=>{
+      const tc=TIER_COL[card.tier];
+      html+=`<div class="roster-card" style="border:1px solid ${tc}33"><div class="roster-icon" style="background:${tc}20;color:${tc};border:1px solid ${tc}44">${card.name[0]}</div><div><div class="roster-name">${card.name}</div><div class="roster-tier" style="color:${tc}">${card.tier} ${card.role}</div><div class="roster-stat">${card.stat}</div></div></div>`;
+    });
+    html+=`<button class="upgrade-btn" style="background:${c}20;border:1px solid ${c}55;color:${c}">Upgrade to Level ${n.level+1}</button>`;
+  } else if(n.owner==='market'){
+    html+=`<div class="stat-grid"><div class="stat-box"><div class="stat-label">CAPEX</div><div class="stat-val" style="font-size:14px;color:#ef4444">${fmt(n.capex)}</div></div><div class="stat-box"><div class="stat-label">OPEX/MO</div><div class="stat-val" style="font-size:14px;color:#f59e0b">${fmt(n.opex)}</div></div></div>`;
+    html+=`<div style="font-size:9px;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em">Acquisition Method</div>`;
+    html+=`<button class="build-btn" style="background:#10b98120;border:1px solid #10b98155;color:#10b981">BUILD IT — ${fmt(n.capex*0.6)} + 14 days</button>`;
+    html+=`<button class="buy-btn" style="background:#ef444420;border:1px solid #ef444455;color:#ef4444">BUY IT (ACQUISITION) — ${fmt(n.capex)} instant</button>`;
+  } else if(n.owner==='rival'){
+    html+=`<div class="rival-box"><div style="font-size:9px;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Rival Intelligence</div><div style="font-size:10px;color:#64748b">Data encrypted. Requires Shadow Operations Level 3 to decrypt.</div><div class="redacted">REDACTED</div></div>`;
+    html+=`<button class="strike-btn" style="background:#ef444415;border:1px solid #ef444440;color:#ef4444">Initiate M&A Cyber-Strike</button>`;
+  }
+  rp.innerHTML=html;
+}
+
+// Delegate close click on right panel
+document.getElementById('rightPanel').addEventListener('click',e=>{
+  if(e.target.classList.contains('rp-close')){selectedNode=null;document.getElementById('rightPanel').classList.add('closed');}
+});
+
+function renderCmdList(filter=''){
+  const el=document.getElementById('cmdList');
+  const f=filter.toLowerCase();
+  const items=CMD_ITEMS.filter(c=>c.label.toLowerCase().includes(f)||c.desc.toLowerCase().includes(f));
+  el.innerHTML=items.map(c=>`<div class="cmd-item" data-key="${c.key}"><div class="cmd-item-label">${c.label}</div><div class="cmd-item-desc">${c.desc}</div></div>`).join('');
+  el.querySelectorAll('.cmd-item').forEach(i=>i.addEventListener('click',()=>handleCmd(i.dataset.key)));
+}
+
+function handleCmd(key){
+  closeTerminal();
+  if(key==='routes')toggleRoutes();
+  else if(key==='crime'){activeTab='crime';setTab('crime');}
+  else if(key==='dept'){activeTab='departments';setTab('departments');}
+  else if(key==='market'){activeTab='marketplace';setTab('marketplace');}
+  else if(key==='maven')toggleMaven();
+  else if(key==='pack')openPack();
+}
+
+function renderTicker(){
+  const el=document.getElementById('tickerTrack');
+  const all=[...TICKER,...TICKER];
+  el.innerHTML=all.map(e=>`<span class="ticker-item" style="color:${TICKER_COL[e.type]||'#64748b'}">${e.text}</span>`).join('');
+}
+
+// ── UI ACTIONS ─────────────────────────────────────────────────────
+function setTab(key){
+  activeTab=key;
+  document.querySelectorAll('.tab').forEach(t=>{t.classList.toggle('active',t.dataset.tab===key);});
+  renderTab();
+}
+
+function openTerminal(){
+  document.getElementById('terminalOverlay').classList.remove('hidden');
+  const inp=document.getElementById('terminalInput');
+  inp.value='';renderCmdList();
+  setTimeout(()=>inp.focus(),50);
+}
+function closeTerminal(){document.getElementById('terminalOverlay').classList.add('hidden');}
+
+function toggleMaven(){
+  mavenOpen=!mavenOpen;
+  document.getElementById('mavenPanel').classList.toggle('closed',!mavenOpen);
+}
+
+function toggleLeftRail(){
+  leftOpen=!leftOpen;
+  document.getElementById('leftRail').classList.toggle('closed',!leftOpen);
+  const tog=document.getElementById('railToggle');
+  tog.style.left=leftOpen?'333px':'0';
+  tog.textContent=leftOpen?'‹':'›';
+}
+
+function openPack(){
+  const ov=document.getElementById('packOverlay');
+  ov.classList.remove('hidden');
+  document.getElementById('packContent').innerHTML=`<div class="pack-box" id="packBox"><div><div class="pack-q">Q</div><div class="pack-label">Quantico Pack</div><div class="pack-tap">TAP TO REVEAL</div></div></div>`;
+  document.getElementById('packBox').addEventListener('click',revealPack);
+}
+function revealPack(){
+  const cards=[
+    {name:"Marcus Webb",role:"Operations Director",tier:"Gold",stat:"+30% venue throughput"},
+    {name:"Yuki Tanaka",role:"Risk Analyst",tier:"Silver",stat:"-12% audit detection"},
+    {name:"Fatima Al-Rashid",role:"Logistics Expert",tier:"Diamond",stat:"+45% route efficiency"},
+  ];
+  document.getElementById('packContent').innerHTML=`<div class="pack-cards">${cards.map((c,i)=>{const tc=TIER_COL[c.tier];return`
+    <div class="revealed-card" style="border:2px solid ${tc}66;box-shadow:0 0 30px ${tc}22;animation-delay:${i*0.15}s">
+      <div class="rc-icon" style="background:${tc}20;color:${tc};border:2px solid ${tc}44">${c.name[0]}</div>
+      <div class="rc-tier" style="color:${tc}">${c.tier}</div>
+      <div class="rc-name">${c.name}</div>
+      <div class="rc-role">${c.role}</div>
+      <div class="rc-stat">${c.stat}</div>
+    </div>`;}).join('')}</div>`;
+}
+
+// ── EVENT BINDING ──────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setTab(t.dataset.tab)));
+document.getElementById('cmdBtn').addEventListener('click',openTerminal);
+document.getElementById('terminalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTerminal();});
+document.getElementById('terminalInput').addEventListener('input',e=>renderCmdList(e.target.value));
+document.getElementById('routesBtn').addEventListener('click',toggleRoutes);
+document.getElementById('railToggle').addEventListener('click',toggleLeftRail);
+document.getElementById('mavenBtn').addEventListener('click',toggleMaven);
+document.getElementById('mavenClose').addEventListener('click',()=>{mavenOpen=false;document.getElementById('mavenPanel').classList.add('closed');});
+document.getElementById('packBtn').addEventListener('click',openPack);
+document.getElementById('packOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
+
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openTerminal();}
+  if(e.key==='Escape'){closeTerminal();selectedNode=null;renderRightPanel();mavenOpen=false;document.getElementById('mavenPanel').classList.add('closed');document.getElementById('packOverlay').classList.add('hidden');}
+});
+
+// ── INIT ───────────────────────────────────────────────────────────
+renderTab();
+renderTicker();
+initMap();
+</script>
+</body>
+</html>
