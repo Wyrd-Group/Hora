@@ -209,7 +209,7 @@ Funds, season pass, real PvP matchmaker, cosmetic shop = post-MVP.
 In this order:
 
 1. **Visual style guide** (see `docs/VISUAL_DIRECTION.md`) — palette + typography + the home-screen layout
-2. **Rename `apps/empire/` → `apps/hora/`** and strip AEGIS-only modules
+2. **Rename `apps/hora/` → `apps/hora/`** and strip AEGIS-only modules
 3. **The home screen** (treasury orb + 2 buildings + gold counter + Oracle bubble)
 4. **Tap-to-collect** with the full reward juice
 5. **First upgrade flow** with timer + skip-with-hourglass

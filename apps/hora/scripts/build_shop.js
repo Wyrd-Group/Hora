@@ -106,7 +106,7 @@ export const SHOPPING_ASSETS: ShoppingAsset[] = [\n`;
   }
 
   fileContent += `];\n`;
-  fs.writeFileSync('apps/empire/src/data/shoppingData.ts', fileContent);
+  fs.writeFileSync('apps/hora/src/data/shoppingData.ts', fileContent);
   console.log('Finished writing 190 items to shoppingData.ts');
 }
 

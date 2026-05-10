@@ -1,7 +1,7 @@
 # ============================================================================
 # Dependabot — scan only the AEGIS Empire app
 # ============================================================================
-# /apps/empire is the active product. Legacy prototypes (glass, os-prototype,
+# /apps/hora is the active product. Legacy prototypes (glass, os-prototype,
 # quantico-os) and the vendored flowcore reference code were moved to the
 # `archive/prototypes` branch so GitHub's dependency graph stops flagging
 # transitive advisories for unshipped code.
@@ -13,7 +13,7 @@ version: 2
 updates:
   # Primary app — prod + dev deps, weekly
   - package-ecosystem: "npm"
-    directory: "/apps/empire"
+    directory: "/apps/hora"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -66,7 +66,7 @@ updates:
 
   # Tauri Rust crate — weekly, only when /src-tauri exists
   - package-ecosystem: "cargo"
-    directory: "/apps/empire/src-tauri"
+    directory: "/apps/hora/src-tauri"
     schedule:
       interval: "weekly"
     labels:

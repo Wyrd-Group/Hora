@@ -178,7 +178,7 @@ async function main() {
   console.log(`===========================================`);
 
   const fileOutput = `import { EmpireNode } from '../store/empireStore';\n\nexport const PROCEDURAL_NODES: EmpireNode[] = ${JSON.stringify(nodes, null, 2)};\n`;
-  const outputPath = path.resolve('./apps/empire/src/data/infrastructureData.ts');
+  const outputPath = path.resolve('./apps/hora/src/data/infrastructureData.ts');
   fs.writeFileSync(outputPath, fileOutput, 'utf-8');
   console.log(`💾 Saved hardcoded production dataset to ${outputPath}`);
 }

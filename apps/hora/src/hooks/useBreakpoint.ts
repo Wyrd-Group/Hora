@@ -8,7 +8,7 @@
 //   const { isMobile, isTablet, isDesktop, bp } = useBreakpoint();
 //   {isMobile ? <MobileNav /> : <DesktopNav />}
 //
-// Breakpoints match Tailwind defaults (apps/empire/tailwind.config.js):
+// Breakpoints match Tailwind defaults (apps/hora/tailwind.config.js):
 //   sm: >=640px    (large phone / small tablet portrait)
 //   md: >=768px    (tablet portrait — hides mobile-only UI by default)
 //   lg: >=1024px   (tablet landscape / small laptop)

@@ -19,5 +19,5 @@
   - [x] Update `tailwind.config.js` only if new semantic aliases are required
 
 - [x] 5. Verify build integrity
-  - [x] Run production build in `apps/empire`
+  - [x] Run production build in `apps/hora`
   - [x] Resolve any lint/build regressions from polish edits

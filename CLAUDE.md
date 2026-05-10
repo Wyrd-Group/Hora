@@ -10,8 +10,8 @@ Bootstrapped from AEGIS Empire (Apr 2026 snapshot) but pivoting in audience, mec
 
 Do not write code that:
 
-- References ECFL, the curriculum, the academy, or any AEGIS-specific data model. The `apps/empire/src/data/{courseContent,courseContentF456,ecflContent}.{ts,js}` modules are slated for deletion.
-- References Substrate Mode, NCOE, the venture pipeline, or any of that R&D. The `apps/empire/src/substrate/` directory is slated for deletion.
+- References ECFL, the curriculum, the academy, or any AEGIS-specific data model. The `apps/hora/src/data/{courseContent,courseContentF456,ecflContent}.{ts,js}` modules are slated for deletion.
+- References Substrate Mode, NCOE, the venture pipeline, or any of that R&D. The `apps/hora/src/substrate/` directory is slated for deletion.
 - References Athena (AEGIS's advisor). Hora has the Oracle, a separate character with a different voice (chirpy/animated, not reverent).
 - Uses AEGIS's visual tokens (`#00e5ff` cyan, `#060a12` navy, JetBrains Mono, Cormorant Garamond, the ritual backdrop, scanlines, film grain, light shafts).
 - Reaches for "intelligence platform / CRT" aesthetic. Hora is bright/saturated/juicy — see `docs/VISUAL_DIRECTION.md`.
@@ -33,22 +33,22 @@ These continue as-is unless you have a reason to change them:
 - Auth pattern (simplified for Hora — no ToS interstitial for Substrate, no ECFL-band gating)
 - GDPR/privacy patterns
 - British English (`centre`, `behaviour`, `synchronisation`, `-ise`)
-- File structure under `apps/empire/src/` (slated for rename to `apps/hora/`)
+- File structure under `apps/hora/src/` (slated for rename to `apps/hora/`)
 - Capacitor + Tauri build configs (Hora keeps mobile + desktop targets)
 - The general "atmosphere component is its own file, content is its own component, state is Zustand store" architecture
 
 ## The renaming task (open)
 
-`apps/empire/` should become `apps/hora/`. This is a sweeping rename:
+`apps/hora/` should become `apps/hora/`. This is a sweeping rename:
 
-- Directory: `apps/empire/` → `apps/hora/`
+- Directory: `apps/hora/` → `apps/hora/`
 - `apps/hora/package.json`: name `aegis-empire` → `hora`
 - `apps/hora/index.html`: title `AEGIS — EMPIRE` → `Hora`, all `apple-mobile-web-app-title` etc.
 - `apps/hora/public/manifest.json`: PWA `name`, `short_name`, `description`
 - `apps/hora/capacitor.config.ts`: `appId` (already updated to `com.quadratic.hora`), `appName` (already `Hora`)
 - `apps/hora/src-tauri/tauri.conf.json`: `productName`, `identifier`
 - Workspace `pnpm-workspace.yaml`: already wildcards `apps/*`, no change needed
-- Imports across the codebase: there shouldn't be any cross-module imports referencing `apps/empire` by absolute path (everything is relative within the app), but verify with `grep -r "apps/empire" apps/hora/`
+- Imports across the codebase: there shouldn't be any cross-module imports referencing `apps/hora` by absolute path (everything is relative within the app), but verify with `grep -r "apps/hora" apps/hora/`
 
 Schedule this as the very first PR after this initial setup. It's mechanical but touches a lot of files.
 
@@ -57,7 +57,7 @@ Schedule this as the very first PR after this initial setup. It's mechanical but
 Per `docs/GAME_DESIGN.md` section 12:
 
 1. Visual style guide PR (palette + typography + Hora wordmark + Oracle mascot designs)
-2. `apps/empire/` → `apps/hora/` rename PR
+2. `apps/hora/` → `apps/hora/` rename PR
 3. Strip AEGIS-only modules PR (substrate, ECFL, AEGIS branding components)
 4. Treasury home screen PR
 5. Tap-to-collect PR (with full reward juice)
@@ -82,7 +82,7 @@ Ship each as its own PR. Don't bundle. The visual style guide must merge first b
 ## Local dev
 
 ```bash
-cd apps/empire   # will become apps/hora soon
+cd apps/hora   # will become apps/hora soon
 npm install
 npm run dev      # vite, port 5173 by default
 ```

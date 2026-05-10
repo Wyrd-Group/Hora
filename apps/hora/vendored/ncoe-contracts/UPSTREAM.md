@@ -27,7 +27,7 @@
 
 ## What the AEGIS-side wrappers look like
 
-- `apps/empire/src/substrate/types.ts` — Re-exports the public types from
+- `apps/hora/src/substrate/types.ts` — Re-exports the public types from
   `venture_spec.ts` (so AEGIS source code never imports vendored paths
   directly), plus AEGIS-only types: `VentureAttempt` storage fields beyond
   the wire shape, `SubstrateTosAcceptance`, `SubstrateTelemetryEvent`.

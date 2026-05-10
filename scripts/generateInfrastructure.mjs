@@ -162,7 +162,7 @@ const fileOutput = `import { EmpireNode } from '../store/empireStore';
 export const PROCEDURAL_NODES: EmpireNode[] = ${JSON.stringify(nodes, null, 2)};
 `;
 
-const outputPath = path.resolve('./apps/empire/src/data/infrastructureData.ts');
+const outputPath = path.resolve('./apps/hora/src/data/infrastructureData.ts');
 
 fs.writeFileSync(outputPath, fileOutput, 'utf-8');
 console.log("Successfully generated " + count + " nodes heavily clustered around comparative real-world architectures and wrote to " + outputPath);

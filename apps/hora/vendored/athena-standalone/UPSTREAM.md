@@ -34,13 +34,13 @@
 Per the vendoring rule, AEGIS-specific code is in **separate** files that
 import from the vendored copies, never inside them:
 
-- `apps/empire/src/lib/brain.ts` — Thin TypeScript wrapper around
+- `apps/hora/src/lib/brain.ts` — Thin TypeScript wrapper around
   `brain/athenaBrain.mjs`. Exposes the six canonical methods named in spec
   §6.3 (`learn`, `recall`, `publishInsight`, `getSharedInsight`,
   `getConsensusPrediction`, `sync`) plus diagnostic helpers. Lazy-loaded so
   optional upstream engines (`quadratic-ip/vectorStore.mjs` etc) being
   absent does not break AEGIS at build time.
-- `apps/empire/src/substrate/telemetry/events.ts` — Substrate event taxonomy
+- `apps/hora/src/substrate/telemetry/events.ts` — Substrate event taxonomy
   (spec §12.1) that emits via `brain.learn('aegis_substrate', ...)`.
 
 ## Known upstream import dependencies

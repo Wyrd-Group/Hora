@@ -26,7 +26,7 @@ Tauri was chosen over Electron because:
 5. From the repo root:
 
    ```bash
-   cd apps/empire
+   cd apps/hora
    npm install
    # Generate all icon sizes from our master 512px icon
    npx tauri icon public/icon-512.png

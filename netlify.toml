@@ -1,13 +1,13 @@
 [build]
-  base = "apps/empire"
+  base = "apps/hora"
   command = "npm run build"
-  publish = "apps/empire/dist"
+  publish = "apps/hora/dist"
 
 [build.environment]
   NODE_VERSION = "20"
 
 [functions]
-  directory = "apps/empire/netlify/functions"
+  directory = "apps/hora/netlify/functions"
 
 # SPA fallback — must come AFTER function routes
 [[redirects]]

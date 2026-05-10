@@ -73,7 +73,7 @@ See `docs/GAME_DESIGN.md` for full mechanics and `docs/VISUAL_DIRECTION.md` for 
 - ✅ AEGIS-era cruft pruned (workspace docs moved to `docs/_aegis-legacy/`, heavy zips deleted)
 - ✅ Direction documented (this file + `docs/GAME_DESIGN.md` + `docs/VISUAL_DIRECTION.md` + `CLAUDE.md`)
 - ✅ Capacitor configured mobile-first (portrait lock, splash, Hora identifier)
-- ⏳ Rename `apps/empire/` → `apps/hora/`
+- ⏳ Rename `apps/hora/` → `apps/hora/`
 - ⏳ Strip AEGIS-only modules (Substrate, ECFL, AEGIS branding)
 - ⏳ Rebrand the design system per `docs/VISUAL_DIRECTION.md`
 - ⏳ Replace AEGIS onboarding ritual with the 15-second mobile-game intro

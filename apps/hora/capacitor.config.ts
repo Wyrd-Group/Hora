@@ -7,7 +7,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * The Hora gold-to-coral warm palette replaces AEGIS's deep-navy intelligence-
  * platform aesthetic — see docs/VISUAL_DIRECTION.md for the rationale.
  *
- * The directory is still apps/empire/ pre-rename; the appId and appName
+ * The directory is still apps/hora/ pre-rename; the appId and appName
  * already reflect Hora. The rename to apps/hora/ is scheduled as the
  * very first PR after this scaffold.
  */

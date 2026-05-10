@@ -2,7 +2,7 @@
 
 **Mandate:** Hora must NOT look like AEGIS. AEGIS is a sober intelligence-platform aesthetic targeting business-school students. Hora is a juicy mobile-game targeting Clash Royale players. Different visual languages entirely.
 
-This document defines Hora's visual identity. The current `apps/empire/` codebase still ships AEGIS's design tokens; rebrand follows this spec.
+This document defines Hora's visual identity. The current `apps/hora/` codebase still ships AEGIS's design tokens; rebrand follows this spec.
 
 ---
 
@@ -229,15 +229,15 @@ Mobile-first does not mean accessibility-second.
 
 ## 11. What this means for the codebase
 
-The existing `apps/empire/` ships AEGIS's design tokens. The rebrand pass:
+The existing `apps/hora/` ships AEGIS's design tokens. The rebrand pass:
 
 1. Add fonts to `index.html`:
    ```html
    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&family=Space+Grotesk:wght@600&display=swap" rel="stylesheet">
    ```
 2. Update `tailwind.config.js` `fontFamily` and `colors` extensions per the tables above
-3. Delete: `apps/empire/src/styles/ritual.css` (AEGIS-only)
-4. Delete: `apps/empire/src/components/shared/RitualBackdrop.tsx`, `AegisShield.tsx`, `RitualButton.tsx`
+3. Delete: `apps/hora/src/styles/ritual.css` (AEGIS-only)
+4. Delete: `apps/hora/src/components/shared/RitualBackdrop.tsx`, `AegisShield.tsx`, `RitualButton.tsx`
 5. Replace with: `apps/hora/src/components/shared/HoraOrb.tsx`, `OracleBubble.tsx`, `JuicyButton.tsx`, `CoinBurst.tsx`
 6. Strip the onboarding ritual; replace with `apps/hora/src/components/onboarding/OracleIntro.tsx` (15-second cinematic introducing the Oracle and the treasury)
 

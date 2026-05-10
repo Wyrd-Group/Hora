@@ -1,0 +1,88 @@
+{
+  "id": "/?source=pwa",
+  "name": "Hora",
+  "short_name": "Hora",
+  "description": "Tap, build, raid, repeat. A finance-themed mobile strategy game.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#060a12",
+  "theme_color": "#060a12",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "education",
+    "finance",
+    "games"
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your treasury overview",
+      "url": "/?tab=dashboard",
+      "icons": [
+        {
+          "src": "/apple-touch-icon.png",
+          "sizes": "180x180"
+        }
+      ]
+    },
+    {
+      "name": "Markets",
+      "short_name": "Markets",
+      "description": "Open the trading desk",
+      "url": "/?tab=markets",
+      "icons": [
+        {
+          "src": "/apple-touch-icon.png",
+          "sizes": "180x180"
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AEGIS Empire",
+  "productName": "Hora",
   "version": "1.0.0",
-  "identifier": "com.quadratic.aegis",
+  "identifier": "com.quadratic.hora",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "AEGIS Empire",
+        "title": "Hora",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,
@@ -28,7 +28,9 @@
         "backgroundColor": "#060a12",
         "dragDropEnabled": false,
         "windowEffects": {
-          "effects": ["hudWindow"],
+          "effects": [
+            "hudWindow"
+          ],
           "state": "active"
         }
       }
@@ -44,7 +46,7 @@
     "targets": "all",
     "category": "Education",
     "shortDescription": "Build your financial empire.",
-    "longDescription": "AEGIS Empire — Trade, manage agents, and master the markets in this gamified finance simulator.",
+    "longDescription": "Hora \u2014 tap, build, raid, repeat. A finance-themed mobile strategy game.",
     "copyright": "Copyright (c) 2026 Quadratic. All rights reserved.",
     "publisher": "Quadratic",
     "icon": [
@@ -68,13 +70,18 @@
         "language": "en-US"
       },
       "nsis": {
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "installerIcon": "icons/icon.ico"
       }
     },
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
       },
       "appimage": {
         "bundleMediaFramework": true

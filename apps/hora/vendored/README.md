@@ -9,7 +9,7 @@ and has its own update cadence.
 
 Per `AEGIS_BUILD_SPEC.md` §6.2 and §17.9:
 
-1. **Copy** the files we need under `apps/empire/vendored/<source-name>/`,
+1. **Copy** the files we need under `apps/hora/vendored/<source-name>/`,
    mirroring upstream structure.
 2. **Tag** each vendored directory with an `UPSTREAM.md` documenting source
    absolute path, copy date, files copied, and the do-not-modify notice.

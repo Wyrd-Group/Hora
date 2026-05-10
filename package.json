@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev:api": "cd services/api && .venv/bin/uvicorn main:app --reload --port 8000",
-    "dev:empire": "cd apps/empire && npm run dev",
+    "dev:empire": "cd apps/hora && npm run dev",
     "seed": "cd services/api && python -m scripts.seed",
     "dev:7777": "cd apps/os-prototype && npm run dev"
   },

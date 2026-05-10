@@ -7,7 +7,7 @@
 Regenerate after editing `icon.png`:
 
 ```bash
-cd apps/empire
+cd apps/hora
 npx tauri icon src-tauri/icons/icon.png
 ```
 
