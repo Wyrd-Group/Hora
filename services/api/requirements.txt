@@ -31,7 +31,7 @@ gymnasium>=1.0.0
 # Portfolio optimization — Riskfolio-Lib (pulls cvxpy, scipy, pandas)
 # MV, CVaR, MAD, CDaR, HRP, efficient frontier
 # Without riskfolio, falls back to scipy SLSQP for basic MV
-pandas>=2.2.0
+pandas>=3.0.2
 riskfolio-lib>=6.0.0
 
 # Data pipeline
