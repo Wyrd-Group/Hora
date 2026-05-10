@@ -26,7 +26,7 @@ statsmodels>=0.14.0
 # DRL Training — FinRL via Stable Baselines 3 (optional: install for agent training)
 # pip install torch stable-baselines3 gymnasium  # PPO/A2C/SAC training
 # Without these, training endpoints return 503; inference via TFJS still works
-gymnasium>=1.0.0
+gymnasium>=1.3.0
 
 # Portfolio optimization — Riskfolio-Lib (pulls cvxpy, scipy, pandas)
 # MV, CVaR, MAD, CDaR, HRP, efficient frontier
