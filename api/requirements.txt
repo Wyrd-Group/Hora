@@ -6,7 +6,7 @@ pydantic==2.5.0
 python-multipart==0.0.27
 
 # Core data processing
-numpy==1.24.3
+numpy==2.4.4
 pandas==2.1.3
 
 # Optional but recommended for production
