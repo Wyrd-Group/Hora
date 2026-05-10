@@ -21,7 +21,7 @@ shap>=0.45.0
 # Forecasting — Chronos-2 foundation model (optional: install for ML forecasts)
 # pip install torch chronos-forecasting  # ~200MB for bolt-small model weights
 # Without these, falls back to Holt-Winters (statsmodels) or EWMA (zero deps)
-statsmodels>=0.14.0
+statsmodels>=0.14.6
 
 # DRL Training — FinRL via Stable Baselines 3 (optional: install for agent training)
 # pip install torch stable-baselines3 gymnasium  # PPO/A2C/SAC training
