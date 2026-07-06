@@ -46,7 +46,7 @@
     "@deck.gl/mesh-layers": "^9.2.11",
     "@deck.gl/react": "^9.2.11",
     "@sentry/react": "^10.48.0",
-    "@stripe/stripe-js": "^9.1.0",
+    "@stripe/stripe-js": "^9.9.0",
     "@supabase/supabase-js": "^2.101.1",
     "@tauri-apps/api": "^2.4.0",
     "@tauri-apps/plugin-os": "^2.0.0",
