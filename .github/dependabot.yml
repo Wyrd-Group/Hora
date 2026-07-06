@@ -74,31 +74,7 @@ updates:
       - "app:empire"
       - "rust"
 
-  # Python backends — weekly. Backends are not yet deployed but advisories
-  # should still surface as PRs so we don't accumulate stale CVEs.
-  - package-ecosystem: "pip"
-    directory: "/api"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Lisbon"
-    labels:
-      - "dependencies"
-      - "python"
-
-  - package-ecosystem: "pip"
-    directory: "/services/api"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "python"
-
-  - package-ecosystem: "pip"
-    directory: "/services/ingestor"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "python"
+  # No pip ecosystems are configured here because Hora currently has no
+  # Python dependency manifests under /api, /services/api, or
+  # /services/ingestor. Re-add a pip block only when a requirements.txt,
+  # pyproject.toml, Pipfile, or poetry.lock exists in the target directory.
